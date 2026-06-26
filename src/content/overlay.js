@@ -216,13 +216,17 @@
     function setBeats(info) {
       if (!info) { beats.textContent = ''; beats.style.display = 'none'; return; }
       const aheadPct = (info.aheadPct * 100);
+      const scope = info.ranged ? 'their range' : 'hands';
+      const blockHTML = (info.blocks && info.blocks.length)
+        ? `<div class="pno-beats-block">🚫 you block: ${info.blocks.join(', ')}</div>` : '';
       if (aheadPct < 0.05) {
-        beats.innerHTML = `<span class="pno-beats-hand">${info.heroCatName}</span> — <span class="pno-beats-nuts">the nuts ✓ nothing beats you</span>`;
+        beats.innerHTML = `<span class="pno-beats-hand">${info.heroCatName}</span> — ` +
+          `<span class="pno-beats-nuts">the nuts vs ${scope} ✓</span>` + blockHTML;
       } else {
         const threats = info.categories.slice(0, 3).map((c) => `${c.count} ${c.name}`).join(' · ');
-        beats.innerHTML = `<span class="pno-beats-hand">${info.heroCatName}</span> · ahead of ` +
-          `${(info.behindPct * 100).toFixed(0)}% · <span class="pno-beats-threat">${aheadPct.toFixed(1)}% beat you</span>` +
-          (threats ? `<div class="pno-beats-list">↑ ${threats}</div>` : '');
+        beats.innerHTML = `<span class="pno-beats-hand">${info.heroCatName}</span> · ` +
+          `<span class="pno-beats-threat">${aheadPct.toFixed(1)}% of ${scope} beat you</span>` +
+          (threats ? `<div class="pno-beats-list">↑ ${threats}</div>` : '') + blockHTML;
       }
       beats.style.display = 'block';
     }

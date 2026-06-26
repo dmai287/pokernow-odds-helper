@@ -23,10 +23,11 @@ poker math — see the [disclaimer](#disclaimer).
   call`, alongside the pot you stand to win. Green when +EV, red when −EV.
 - **Outs & draws** — on the flop/turn, labels your flush draws, open-enders, and
   gutshots, counts deduped outs, and estimates the chance to hit by the river.
-- **What beats you** — relative hand strength: enumerates every possible two-card
-  holding, shows the % of hands you're ahead of and the % that beat you, and ranks the
-  threats by category (e.g. "6 full houses · 18 flushes · 54 two pair"), or "the nuts"
-  when nothing beats you. Pure math on your cards + the board.
+- **What beats you** — relative hand strength: ranks the holdings that beat you by
+  category (e.g. "3 full houses · 9 flushes"), or flags "the nuts". **Range-weighted** —
+  counts only the hands a realistic opponent would have ("% of *their range* beat you"),
+  not all random combos — and **blocker-aware** — flags when you hold the nut-flush card
+  ("🚫 you block: nut flush (A♠)"). Pure math on your cards + the board.
 - **Opponent ranges** — model villains as holding a "top X%" range instead of any two
   cards (Chen-formula ranking), for more realistic equity when facing bets.
 - **Auto range** — derives that range from the action: a big bet/raise implies a tight

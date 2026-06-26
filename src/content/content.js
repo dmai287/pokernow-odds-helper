@@ -107,7 +107,6 @@
 
     const drawInfo = PNO.draws.analyze(state.hero, state.board);
     overlay.setDraws(drawInfo);
-    overlay.setBeats(PNO.beats.analyze(state.hero, state.board));
 
     // Build the villain range(s). With auto-range and a multiway bet, model the raiser
     // with a tight range and the callers with a wider one (per-villain ranges).
@@ -129,6 +128,11 @@
       villainRange = p >= 1 ? null : PNO.ranges.topPercent(p);
       rangeLabel = villainRange ? `top ${Math.round(p * 100)}%` : 'any two';
     }
+
+    // "What beats you" — weight by the bettor's range when we have one (use the tight
+    // aggressor range in multiway), else by the single range / all hands.
+    const beatsRange = Array.isArray(villainRange) ? villainRange[0] : villainRange;
+    overlay.setBeats(PNO.beats.analyze(state.hero, state.board, beatsRange));
 
     const res = PNO.equity.monteCarlo(
       state.hero, state.board, state.opponents, settings.iterations, villainRange

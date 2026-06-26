@@ -282,6 +282,16 @@
        weakB.categories[0].cat >= weakB.categories[weakB.categories.length - 1].cat,
        'beats: threat categories ranked strongest first');
     ok(weakB.ahead + weakB.tied + weakB.behind === weakB.total, 'beats: counts sum to total');
+    // #1 range-weighting: a tight range counts far fewer holdings than all combos
+    const allCombos = beatsFn(C('As Kd'), C('Qs Js 7s'));
+    const ranged = beatsFn(C('As Kd'), C('Qs Js 7s'), topPercent(0.10));
+    ok(allCombos.ranged === false && ranged.ranged === true, 'beats: ranged flag set');
+    ok(ranged.total < allCombos.total && ranged.total > 0, 'beats: range weighting reduces the combo pool');
+    // #2 blockers: holding the A♠ on a 3-spade board blocks the nut flush
+    ok(beatsFn(C('As Kd'), C('Qs Js 7s')).blocks.some((b) => /nut flush/.test(b)),
+       'beats: A♠ blocks the nut flush on a spade board');
+    ok(beatsFn(C('2c 7d'), C('Qs Js 7s')).blocks.length === 0,
+       'beats: no spade in hand → no flush blocker');
 
     // --- history street naming ---
     const sn = PNO.history.streetName;
