@@ -1,6 +1,8 @@
 // popup.js — reads/writes settings to chrome.storage.local; the content script
 // listens for changes and updates the overlay live.
-const DEFAULTS = { enabled: true, autoDetect: true, iterations: 2000, villainRange: 100 };
+const DEFAULTS = {
+  enabled: true, autoDetect: true, iterations: 2000, villainRange: 100, autoRange: true,
+};
 
 const enabled = document.getElementById('enabled');
 const autoDetect = document.getElementById('autoDetect');
@@ -8,6 +10,7 @@ const iterations = document.getElementById('iterations');
 const iterVal = document.getElementById('iterVal');
 const villainRange = document.getElementById('villainRange');
 const rangeVal = document.getElementById('rangeVal');
+const autoRange = document.getElementById('autoRange');
 
 const rangeLabel = (v) => (Number(v) >= 100 ? 'any two' : 'top ' + v + '%');
 
@@ -17,7 +20,9 @@ function render(s) {
   iterations.value = s.iterations;
   iterVal.textContent = Number(s.iterations).toLocaleString();
   villainRange.value = s.villainRange;
-  rangeVal.textContent = rangeLabel(s.villainRange);
+  autoRange.checked = s.autoRange;
+  rangeVal.textContent = s.autoRange ? 'auto' : rangeLabel(s.villainRange);
+  villainRange.disabled = s.autoRange;
 }
 
 chrome.storage.local.get(DEFAULTS, render);
@@ -35,4 +40,9 @@ villainRange.addEventListener('input', () => {
 });
 villainRange.addEventListener('change', () => {
   chrome.storage.local.set({ villainRange: parseInt(villainRange.value, 10) });
+});
+autoRange.addEventListener('change', () => {
+  villainRange.disabled = autoRange.checked;
+  rangeVal.textContent = autoRange.checked ? 'auto' : rangeLabel(villainRange.value);
+  chrome.storage.local.set({ autoRange: autoRange.checked });
 });

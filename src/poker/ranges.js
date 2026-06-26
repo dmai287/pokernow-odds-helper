@@ -79,5 +79,26 @@
     return rangeSet.has(handKey(c1, c2));
   }
 
-  PNO.ranges = { chenScore, handKey, topPercent, inRange, ALL_HANDS, TOTAL_COMBOS };
+  // Infer how tight opponents' range should be from the action, as a top-fraction
+  // (0..1). Bigger bets relative to the pot imply stronger, tighter ranges; a limped
+  // or checked pot implies a wide one. Heuristic — it reads aggression, not hands.
+  function tightnessFromAction(pot, call, boardLen) {
+    pot = Number(pot) || 0;
+    call = Number(call) || 0;
+    const preflop = (boardLen || 0) === 0;
+
+    if (call <= 0) return preflop ? 0.60 : 0.65;   // no bet faced: limped / checked
+    if (!(pot > 0)) return 0.50;                    // bet but pot unknown
+
+    const potBefore = Math.max(1, pot - call);      // pot before the facing bet (approx)
+    const ratio = call / potBefore;
+    if (ratio < 0.4) return 0.50;                   // small bet
+    if (ratio < 0.8) return 0.35;                   // half-ish pot
+    if (ratio < 1.5) return 0.22;                   // pot-ish
+    return 0.12;                                    // overbet / big raise
+  }
+
+  PNO.ranges = {
+    chenScore, handKey, topPercent, inRange, tightnessFromAction, ALL_HANDS, TOTAL_COMBOS,
+  };
 })();

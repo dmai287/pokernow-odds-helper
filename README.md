@@ -18,8 +18,10 @@ poker math — see the [disclaimer](#disclaimer).
 - **Outs & draws** — on the flop/turn, labels your flush draws, open-enders, and
   gutshots, counts deduped outs, and estimates the chance to hit by the river.
 - **Opponent ranges** — model villains as holding a "top X%" range instead of any two
-  cards (Chen-formula ranking), for more realistic equity when facing bets. Adjustable
-  in the popup; 100% = any two cards.
+  cards (Chen-formula ranking), for more realistic equity when facing bets.
+- **Auto range** — derives that range from the action: a big bet/raise implies a tight
+  range, a small bet or a limped/checked pot a wide one (on by default). Or set the
+  tightness manually with the popup slider.
 - **Position** — detects your seat relative to the button (blinds / early / late /
   button) and whether you're in position (act last). The advice tightens slightly when
   you're out of position and loosens in position (an equity-realization adjustment).

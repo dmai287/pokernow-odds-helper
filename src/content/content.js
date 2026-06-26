@@ -4,7 +4,9 @@
   const PNO = window.PNO;
   if (!PNO || !PNO.overlay) return;
 
-  const DEFAULTS = { enabled: true, autoDetect: true, iterations: 2000, villainRange: 100 };
+  const DEFAULTS = {
+    enabled: true, autoDetect: true, iterations: 2000, villainRange: 100, autoRange: true,
+  };
   let settings = Object.assign({}, DEFAULTS);
   let overlay = null;
 
@@ -51,7 +53,9 @@
 
     overlay.setDraws(PNO.draws.analyze(state.hero, state.board));
 
-    const pct = Math.max(5, Math.min(100, settings.villainRange || 100)) / 100;
+    const pct = settings.autoRange
+      ? PNO.ranges.tightnessFromAction(state.pot, state.call, state.board.length)
+      : Math.max(5, Math.min(100, settings.villainRange || 100)) / 100;
     const villainRange = pct >= 1 ? null : PNO.ranges.topPercent(pct);
     const res = PNO.equity.monteCarlo(
       state.hero, state.board, state.opponents, settings.iterations, villainRange
@@ -65,7 +69,9 @@
           inPosition: position ? position.inPosition : undefined,
         })
       : { action: '—', tone: 'bad', reason: 'Duplicate card detected — check your inputs.' };
-    const rangeLabel = villainRange ? `top ${Math.round(pct * 100)}%` : 'any two';
+    const rangeLabel = villainRange
+      ? `top ${Math.round(pct * 100)}%${settings.autoRange ? ' (auto)' : ''}`
+      : 'any two';
     overlay.showResult(res, decision, rangeLabel);
 
     // Expected value of calling — only meaningful when there's a bet to call.

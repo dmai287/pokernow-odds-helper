@@ -25,7 +25,7 @@
     const { monteCarlo, potOdds, callEV } = PNO.equity;
     const { decide } = PNO.decision;
     const { analyze } = PNO.draws;
-    const { topPercent, handKey, inRange } = PNO.ranges;
+    const { topPercent, handKey, inRange, tightnessFromAction } = PNO.ranges;
     const out = document.getElementById('out');
     let passed = 0, failed = 0;
 
@@ -181,6 +181,17 @@
     const aaTight = monteCarlo(C('As Ah'), [], 1, 8000, topPercent(0.10)).equity;
     ok(aaRandom - aaTight > 0.01,
        `AA equity lower vs tight range (rand ${aaRandom.toFixed(3)} > tight ${aaTight.toFixed(3)})`);
+
+    // --- auto range from action (bet size → tightness) ---
+    ok(tightnessFromAction(100, 0, 0) === 0.60, 'preflop limp → wide (60%)');
+    ok(tightnessFromAction(150, 0, 3) === 0.65, 'checked flop → wide (65%)');
+    ok(tightnessFromAction(130, 30, 3) === 0.50, 'small bet (~0.3 pot) → top 50%');
+    ok(tightnessFromAction(160, 60, 3) === 0.35, 'half-pot bet → top 35%');
+    ok(tightnessFromAction(200, 100, 3) === 0.22, 'pot-sized bet → top 22%');
+    ok(tightnessFromAction(300, 200, 3) === 0.12, 'overbet → top 12%');
+    // bigger bets imply tighter ranges (monotonic)
+    ok(tightnessFromAction(300, 200, 3) < tightnessFromAction(130, 30, 3),
+       'bigger bet ⇒ tighter range');
 
     const summary = document.createElement('h2');
     summary.innerHTML = `<br>${passed} passed, ${failed} failed`;
