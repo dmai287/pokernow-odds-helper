@@ -14,6 +14,9 @@ poker math — see the [disclaimer](#disclaimer).
 - **Preflop advisor** — before the flop, advice is based on position and starting-hand
   strength (open-raise / call / 3-bet / fold) rather than raw equity, using
   position-aware opening ranges and a tighter range vs. a raise.
+- **Semi-bluffs & fold equity** — with a strong draw (≈8+ outs) and nothing to call, the
+  advice is "Bet (semi-bluff)" instead of a passive check, and shows the fold equity a
+  bluff needs to profit — so you're not winning by value-betting alone.
 - **Pot odds** — enter pot size and amount to call; the panel shows the breakeven
   equity and whether a call is +EV or −EV.
 - **Expected value** — the chips a call is worth on average, `equity × (pot + call) −

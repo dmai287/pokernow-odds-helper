@@ -151,6 +151,22 @@
     ok(decide({ equity: 0.40, pot: 100, call: 50 }).size == null, 'call has no size');
     ok(decide({ equity: 0.10, pot: 100, call: 50 }).size == null, 'fold has no size');
 
+    // --- semi-bluff / fold equity ---
+    const rfe = PNO.decision.requiredFoldEquity;
+    approx(rfe(66, 100), 0.398, 0.005, 'fold equity: ⅔-pot bet needs ~40% folds');
+    approx(rfe(100, 100), 0.5, 0.001, 'fold equity: pot-sized bet needs 50% folds');
+    ok(rfe(0, 100) === null, 'fold equity: no bet → null');
+    // strong draw, no value yet, nothing to call → semi-bluff bet
+    const sb = decide({ equity: 0.35, pot: 100, call: 0, outs: 9 });
+    ok(sb.action === 'Bet (semi-bluff)' && sb.size.chips === 66,
+       'strong draw, checked to → semi-bluff bet (⅔ pot)');
+    // a made hand bets for value, not labelled a semi-bluff
+    ok(decide({ equity: 0.70, pot: 100, call: 0, outs: 9 }).action === 'Bet',
+       'made hand → value Bet, not semi-bluff');
+    // a weak draw (gutshot) is not a semi-bluff
+    ok(!/semi-bluff/.test(decide({ equity: 0.30, pot: 100, call: 0, outs: 4 }).action),
+       'gutshot (4 outs) → not a semi-bluff');
+
     // --- draw / outs detection ---
     const fd = analyze(C('As Ks'), C('Qs 7s 2h'));
     ok(fd.draws.some(d => d.name === 'Flush draw' && d.outs === 9) && fd.outs === 9,

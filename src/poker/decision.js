@@ -17,6 +17,14 @@
     return { chips: Math.round(frac * pot), note };
   }
 
+  // Fold equity a bet needs to break even as a pure bluff: bet / (pot + bet). With a
+  // draw as backup the real requirement is lower, but this is the standard reference.
+  function requiredFoldEquity(bet, pot) {
+    bet = Number(bet) || 0;
+    pot = Number(pot) || 0;
+    return bet > 0 ? bet / (pot + bet) : null;
+  }
+
   // Implied odds: extra chips you must win on later streets to justify a call that is
   // −EV right now. Returns that amount if it's realistically winnable (within the stack
   // behind), else null. Only meaningful with a real draw (outs) and chips behind.
@@ -45,6 +53,7 @@
   const CLOSE_FOLD = 0.05;    // within this of pot odds = a "close" fold
   const POS_CUSHION = 0.03;   // equity realization: out of position needs a bit more
   const IMPLIED_REALIZE = 0.5; // fraction of the stack behind you realistically win on a hit
+  const SEMIBLUFF_OUTS = 8;    // a strong draw (flush draw / open-ender) worth betting
 
   // input: { equity, pot, call, opponents, inPosition, outs, effStack }
   //   inPosition: true (acts last), false (out of position), or undefined (unknown)
@@ -70,6 +79,14 @@
         const size = betSize(equity, pot);
         return { action: 'Bet', tone: 'good', size,
           reason: `Strong equity (${pct(equity)})${posTag} — bet for value${size ? ` (${size.note})` : ''}.` };
+      }
+      // Strong draw but not enough to value bet: semi-bluff — fold equity now plus the
+      // draw as backup beats checking passively.
+      if (outs >= SEMIBLUFF_OUTS) {
+        const size = pot > 0 ? { chips: Math.round(0.66 * pot), note: '≈⅔ pot' } : null;
+        const fe = size ? requiredFoldEquity(size.chips, pot) : null;
+        return { action: 'Bet (semi-bluff)', tone: 'good', size,
+          reason: `${outs} outs + fold equity — semi-bluff${fe != null ? `; needs ~${Math.round(fe * 100)}% folds as a pure bluff (less with your draw)` : ''}.` };
       }
       if ((heads || ip === true) && equity >= THIN_BET) {
         const size = betSize(equity, pot);
@@ -119,5 +136,5 @@
       reason: `+EV call${posTag} — ${pct(equity)} vs ${pct(breakeven)} needed.` };
   }
 
-  PNO.decision = { decide };
+  PNO.decision = { decide, requiredFoldEquity };
 })();
