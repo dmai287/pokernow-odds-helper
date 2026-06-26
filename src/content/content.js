@@ -29,9 +29,11 @@
     let position = null;
     let heroStack = null;
 
+    let bb = null;
     if (settings.autoDetect) {
       const scraped = PNO.scraper.scrape();
       heroStack = scraped.heroStack;
+      bb = scraped.bb;
       // Mirror the live table exactly, including empties. When a hand ends and the
       // board / hole cards clear, this resets the displayed cards and odds instead of
       // leaving the previous hand's numbers on screen.
@@ -77,15 +79,28 @@
     const res = PNO.equity.monteCarlo(
       state.hero, state.board, state.opponents, settings.iterations, villainRange
     );
-    const decision = res
-      ? PNO.decision.decide({
-          equity: res.equity,
-          pot: state.pot,
-          call: state.call,
-          opponents: state.opponents,
+    // Preflop, prefer position-based starting-hand advice; postflop use equity/pot odds.
+    const preflopAdvice = (state.board.length === 0)
+      ? PNO.preflop.advise({
+          hole: state.hero,
+          position: position ? position.name : null,
           inPosition: position ? position.inPosition : undefined,
+          call: state.call,
+          bb,
         })
-      : { action: '—', tone: 'bad', reason: 'Duplicate card detected — check your inputs.' };
+      : null;
+
+    const decision = preflopAdvice
+      ? preflopAdvice
+      : res
+        ? PNO.decision.decide({
+            equity: res.equity,
+            pot: state.pot,
+            call: state.call,
+            opponents: state.opponents,
+            inPosition: position ? position.inPosition : undefined,
+          })
+        : { action: '—', tone: 'bad', reason: 'Duplicate card detected — check your inputs.' };
     const rangeLabel = villainRange
       ? `top ${Math.round(pct * 100)}%${settings.autoRange ? ' (auto)' : ''}`
       : 'any two';

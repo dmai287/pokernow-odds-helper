@@ -79,6 +79,20 @@
     return rangeSet.has(handKey(c1, c2));
   }
 
+  // Map each hand key to its cumulative top-fraction (0..1); lower = stronger.
+  // AA ≈ 0.005 (top half-percent), 72o ≈ 1.0 (bottom).
+  const PERCENTILE = (function () {
+    const sorted = ALL_HANDS.slice().sort((a, b) => b.score - a.score);
+    const map = {};
+    let acc = 0;
+    for (const h of sorted) { acc += h.combos; map[h.key] = acc / TOTAL_COMBOS; }
+    return map;
+  })();
+
+  function handPercentile(c1, c2) {
+    return PERCENTILE[handKey(c1, c2)];
+  }
+
   // Infer how tight opponents' range should be from the action, as a top-fraction
   // (0..1). Bigger bets relative to the pot imply stronger, tighter ranges; a limped
   // or checked pot implies a wide one. Heuristic — it reads aggression, not hands.
@@ -99,6 +113,7 @@
   }
 
   PNO.ranges = {
-    chenScore, handKey, topPercent, inRange, tightnessFromAction, ALL_HANDS, TOTAL_COMBOS,
+    chenScore, handKey, topPercent, inRange, tightnessFromAction, handPercentile,
+    ALL_HANDS, TOTAL_COMBOS,
   };
 })();

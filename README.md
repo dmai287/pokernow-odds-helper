@@ -11,6 +11,9 @@ poker math — see the [disclaimer](#disclaimer).
 - **Action + sizing** — a single recommendation (Fold / Check / Call / Bet / Raise);
   when it's Bet or Raise it suggests an amount in chips, scaled to the pot and your
   hand strength (e.g. "Raise → 420 (pot-sized)", "Bet → 158 (≈⅔ pot)").
+- **Preflop advisor** — before the flop, advice is based on position and starting-hand
+  strength (open-raise / call / 3-bet / fold) rather than raw equity, using
+  position-aware opening ranges and a tighter range vs. a raise.
 - **Pot odds** — enter pot size and amount to call; the panel shows the breakeven
   equity and whether a call is +EV or −EV.
 - **Expected value** — the chips a call is worth on average, `equity × (pot + call) −

@@ -19,6 +19,7 @@
   <script src="../src/poker/decision.js"></script>
   <script src="../src/poker/draws.js"></script>
   <script src="../src/poker/ranges.js"></script>
+  <script src="../src/poker/preflop.js"></script>
   <script src="../src/content/history.js"></script>
   <script>
     const { parseCard } = PNO.cards;
@@ -198,6 +199,28 @@
     const sn = PNO.history.streetName;
     ok(sn(0) === 'preflop' && sn(3) === 'flop' && sn(4) === 'turn' && sn(5) === 'river',
        'streetName maps board length to street');
+
+    // --- preflop advice ---
+    const adv = PNO.preflop.advise;
+    const hp = PNO.ranges.handPercentile;
+    ok(hp(parseCard('As'), parseCard('Ah')) < hp(parseCard('Ks'), parseCard('Qh')),
+       'AA has a stronger percentile than KQo');
+    const aaH = C('As Ah'), trash = C('7c 2d');
+    ok(adv({ hole: aaH, position: 'Early/Middle', call: 0 }).action === 'Raise',
+       'AA open-raises from early position');
+    ok(adv({ hole: aaH, position: 'Button', call: 200, bb: 20 }).action === 'Raise',
+       'AA 3-bets facing a raise');
+    ok(adv({ hole: trash, position: 'Button', call: 0 }).action === 'Fold',
+       '72o folds on the button (unraised)');
+    ok(adv({ hole: trash, position: 'Big blind', call: 0 }).action === 'Check',
+       '72o checks the big-blind option');
+    ok(adv({ hole: trash, position: 'Early/Middle', call: 200 }).action === 'Fold',
+       '72o folds facing a raise');
+    // Button opens at least as wide as early position for any hand.
+    const mid = C('Ks 9s');
+    const epAct = adv({ hole: mid, position: 'Early/Middle', call: 0 }).action;
+    const btnAct = adv({ hole: mid, position: 'Button', call: 0 }).action;
+    ok(!(epAct === 'Raise' && btnAct !== 'Raise'), 'Button opens at least as wide as early');
 
     const summary = document.createElement('h2');
     summary.innerHTML = `<br>${passed} passed, ${failed} failed`;

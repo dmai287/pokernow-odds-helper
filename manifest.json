@@ -39,6 +39,7 @@
         "src/poker/decision.js",
         "src/poker/draws.js",
         "src/poker/ranges.js",
+        "src/poker/preflop.js",
         "src/content/scraper.js",
         "src/content/overlay.js",
         "src/content/history.js",
