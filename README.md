@@ -42,6 +42,9 @@ poker math — see the [disclaimer](#disclaimer).
   opponents, pot/call, equity, the suggested action, EV, and a best-effort net result)
   to local storage. Review them in a sortable table, export to CSV, or clear — opened
   from the popup. Great for post-session study.
+- **Leak report** — turns the logged hands into a study report: net by position,
+  in-position vs out-of-position win rate, aggression %, showdown frequency, −EV calls,
+  your biggest losses, and prioritized, actionable tips on where you're spilling chips.
 - **Draggable overlay** — a compact panel you can move and collapse.
 - **Configurable** — toggle the overlay, auto-detect, and simulation count from the
   extension popup.

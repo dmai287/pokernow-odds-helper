@@ -39,6 +39,38 @@ h1 { font-size: 18px; }
 .summary strong { color: #6fe79f; font-size: 15px; }
 .summary .stat { display: flex; flex-direction: column; gap: 2px; }
 
+.leaks { margin-bottom: 22px; }
+.leak-title { font-size: 15px; margin-bottom: 12px; }
+.leak-title small { color: #6b7785; font-weight: 400; font-size: 12px; }
+
+.leak-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.leak-card {
+  background: #0e1218;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.leak-card .lk-label { color: #8e9bab; font-size: 11px; }
+.leak-card strong, .leak-card .pos, .leak-card .neg { font-size: 18px; font-weight: 700; }
+.leak-card small { color: #6b7785; font-size: 10px; }
+
+.leak-cols { display: grid; grid-template-columns: 1fr 1.4fr; gap: 20px; }
+.leak-cols h3 { font-size: 12px; color: #8e9bab; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+.leak-pos { width: 100%; }
+.leak-tips, .leak-worst { margin: 0 0 14px; padding-left: 18px; }
+.leak-tips li { margin-bottom: 7px; color: #e8edf2; }
+.leak-worst li { margin-bottom: 5px; color: #b6c1cd; font-size: 12px; }
+
+@media (max-width: 720px) { .leak-cols { grid-template-columns: 1fr; } }
+
 .table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 12px; }
 th, td {

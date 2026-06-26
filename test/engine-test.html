@@ -20,6 +20,7 @@
   <script src="../src/poker/draws.js"></script>
   <script src="../src/poker/ranges.js"></script>
   <script src="../src/poker/preflop.js"></script>
+  <script src="../src/poker/leaks.js"></script>
   <script src="../src/content/history.js"></script>
   <script>
     const { parseCard } = PNO.cards;
@@ -196,13 +197,14 @@
        'bigger bet ⇒ tighter range');
 
     // --- per-villain ranges (array form of monteCarlo) ---
+    // Use a range-sensitive hand: KJo is crushed by a tight range, fine vs a loose one.
     const r10 = topPercent(0.10), r80 = topPercent(0.80);
-    const eqTight2 = monteCarlo(C('As Ah'), [], 2, 5000, [r10, r10]).equity;
-    const eqLoose2 = monteCarlo(C('As Ah'), [], 2, 5000, [r80, r80]).equity;
-    const eqMixed2 = monteCarlo(C('As Ah'), [], 2, 5000, [r10, r80]).equity;
-    ok(eqLoose2 - eqTight2 > 0.01,
-       `AA equity lower vs two tight ranges (tight ${eqTight2.toFixed(3)} < loose ${eqLoose2.toFixed(3)})`);
-    ok(eqMixed2 > 0 && eqMixed2 < 1, 'mixed per-villain range returns a valid equity');
+    const kjTight = monteCarlo(C('Ks Jd'), [], 2, 6000, [r10, r10]).equity;
+    const kjLoose = monteCarlo(C('Ks Jd'), [], 2, 6000, [r80, r80]).equity;
+    const kjMixed = monteCarlo(C('Ks Jd'), [], 2, 6000, [r10, r80]).equity;
+    ok(kjLoose - kjTight > 0.03,
+       `KJo equity much lower vs tight ranges (tight ${kjTight.toFixed(3)} < loose ${kjLoose.toFixed(3)})`);
+    ok(kjMixed > 0 && kjMixed < 1, 'mixed per-villain range returns a valid equity');
 
     // --- implied odds (draw makes a −EV call playable when stacks are deep) ---
     // equity 30% vs pot 100 / call 50 (breakeven 33.3%) — folds without a draw...
@@ -214,6 +216,24 @@
     // a draw but almost no stack behind → still Fold (no implied odds)
     ok(decide({ equity: 0.20, pot: 100, call: 50, outs: 9, effStack: 10 }).action.startsWith('Fold'),
        '−EV draw with no stack behind → Fold');
+
+    // --- leak report ---
+    const leakHands = [
+      { position: 'Big blind', inPosition: false, street: 'river', action: 'Call', ev: -30, net: -100, hero: ['As','Kd'], board: ['2c','3d','4h','5s','9c'] },
+      { position: 'Button', inPosition: true, street: 'flop', action: 'Bet → 50', ev: null, net: 120 },
+      { position: 'Big blind', inPosition: false, street: 'river', action: 'Call', ev: -20, net: -50, hero: ['Qh','Jc'], board: ['2c','3d','4h','5s','Kc'] },
+      { position: 'Cutoff', inPosition: true, street: 'turn', action: 'Raise → 200', ev: null, net: 200 },
+    ];
+    const lr = PNO.leaks.analyze(leakHands);
+    ok(lr.count === 4 && lr.netTotal === 170, 'leak report: count and net total');
+    ok(lr.minusEvCalls.count === 2 && lr.minusEvCalls.evLost === -50, 'leak report: −EV calls tallied');
+    ok(Math.round(lr.oop.netPerHand) === -75 && Math.round(lr.ip.netPerHand) === 160,
+       'leak report: OOP loses, IP wins');
+    ok(lr.aggression.ratioPct === 50, 'leak report: aggression 50%');
+    ok(lr.byPosition[0].position === 'Big blind', 'leak report: worst position first');
+    ok(lr.worstHands[0].net === -100, 'leak report: biggest loss surfaced');
+    ok(lr.tips.some((t) => /out of position/.test(t)), 'leak report: OOP tip generated');
+    ok(PNO.leaks.analyze([]).count === 0, 'leak report: empty input handled');
 
     // --- history street naming ---
     const sn = PNO.history.streetName;

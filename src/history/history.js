@@ -21,9 +21,46 @@ function signed(x) {
 }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
 
+const leakEl = document.getElementById('leakReport');
+
+function n0(x) { return x == null ? '—' : Math.round(x).toLocaleString(); }
+function signedSpan(x) {
+  if (x == null) return '<span class="muted">—</span>';
+  const cls = x >= 0 ? 'pos' : 'neg';
+  return `<span class="${cls}">${x >= 0 ? '+' : '−'}${Math.abs(Math.round(x)).toLocaleString()}</span>`;
+}
+
+function renderLeaks() {
+  if (!leakEl) return;
+  if (!hands.length || !window.PNO || !PNO.leaks) { leakEl.innerHTML = ''; return; }
+  const r = PNO.leaks.analyze(hands);
+
+  const posRows = r.byPosition.map((p) =>
+    `<tr><td>${esc(p.position)}</td><td class="mono">${p.hands}</td>` +
+    `<td class="mono">${p.netPerHand == null ? '<span class="muted">—</span>' : signedSpan(p.netPerHand)}</td></tr>`
+  ).join('');
+
+  leakEl.innerHTML =
+    `<h2 class="leak-title">📉 Leak Report <small>${r.count} hands${r.hasNet ? `, ${r.netCount} with results` : ''}</small></h2>` +
+    `<div class="leak-grid">` +
+      `<div class="leak-card"><span class="lk-label">In position</span>${signedSpan(r.ip.netPerHand)}<small>/hand · ${r.ip.hands} hands</small></div>` +
+      `<div class="leak-card"><span class="lk-label">Out of position</span>${signedSpan(r.oop.netPerHand)}<small>/hand · ${r.oop.hands} hands</small></div>` +
+      `<div class="leak-card"><span class="lk-label">Aggression</span><strong>${r.aggression.ratioPct == null ? '—' : r.aggression.ratioPct + '%'}</strong><small>bets/raises of actions</small></div>` +
+      `<div class="leak-card"><span class="lk-label">Reached river</span><strong>${Math.round(r.riverRate * 100)}%</strong><small>of hands</small></div>` +
+      `<div class="leak-card"><span class="lk-label">−EV calls</span><strong class="neg">${r.minusEvCalls.count}</strong><small>~${Math.abs(r.minusEvCalls.evLost)} chips lost</small></div>` +
+    `</div>` +
+    `<div class="leak-cols">` +
+      `<div><h3>By position</h3><table class="leak-pos"><thead><tr><th>Seat</th><th>Hands</th><th>Net/hand</th></tr></thead><tbody>${posRows}</tbody></table></div>` +
+      `<div><h3>Fix these leaks</h3><ul class="leak-tips">${r.tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` +
+        (r.worstHands.length ? `<h3>Biggest losses</h3><ul class="leak-worst">${r.worstHands.map((h) => `<li><span class="mono">${esc(h.hero)}</span> ${h.board ? 'on <span class="mono">' + esc(h.board) + '</span>' : ''} · ${esc(h.position || '—')} · ${signedSpan(h.net)}</li>`).join('')}</ul>` : '') +
+      `</div>` +
+    `</div>`;
+}
+
 function render() {
   rowsEl.innerHTML = '';
   emptyEl.hidden = hands.length > 0;
+  renderLeaks();
 
   hands.slice().reverse().forEach((h, i) => {
     const n = hands.length - i;
