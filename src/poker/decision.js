@@ -7,6 +7,26 @@
 
   const pct = (x) => (x * 100).toFixed(1) + '%';
 
+  // Bet sizing (no bet to call): fraction of the pot, bigger with more equity.
+  function betSize(equity, pot) {
+    if (!(pot > 0)) return null;
+    let frac, note;
+    if (equity >= 0.75) { frac = 0.75; note = '≈¾ pot'; }
+    else if (equity >= 0.60) { frac = 0.66; note = '≈⅔ pot'; }
+    else { frac = 0.45; note = '≈½ pot'; }
+    return { chips: Math.round(frac * pot), note };
+  }
+
+  // Raise sizing (facing a bet): total chips to commit = call + a raise increment
+  // measured against the pot after calling. Pot-sized for the strongest hands.
+  function raiseSize(equity, pot, call) {
+    if (!(pot > 0)) return null;
+    const potAfterCall = pot + call;
+    const frac = equity >= 0.75 ? 1.0 : 0.66;
+    const total = Math.round(call + frac * potAfterCall);
+    return { chips: total, note: frac >= 1 ? 'pot-sized raise' : '≈⅔-pot raise' };
+  }
+
   // Absolute-equity thresholds for raising/betting for value.
   const VALUE_RAISE = 0.66;   // strong favorite → raise when facing a bet
   const VALUE_BET = 0.60;     // good favorite → bet when checked to
@@ -33,12 +53,14 @@
     // No bet to call: choose between betting/checking. In position you can bet thinner.
     if (call <= 0) {
       if (equity >= VALUE_BET) {
-        return { action: 'Bet / Raise', tone: 'good',
-          reason: `Strong equity (${pct(equity)}) — bet for value.` };
+        const size = betSize(equity, pot);
+        return { action: 'Bet', tone: 'good', size,
+          reason: `Strong equity (${pct(equity)})${posTag} — bet for value${size ? ` (${size.note})` : ''}.` };
       }
       if ((heads || ip === true) && equity >= THIN_BET) {
-        return { action: 'Bet (thin)', tone: 'neutral',
-          reason: `Slight edge (${pct(equity)})${posTag} — a thin value bet is fine, or check.` };
+        const size = betSize(equity, pot);
+        return { action: 'Bet (thin)', tone: 'neutral', size,
+          reason: `Slight edge (${pct(equity)})${posTag} — thin value bet${size ? ` (${size.note})` : ''}, or check.` };
       }
       if (equity >= 0.40) {
         return { action: 'Check', tone: 'neutral',
@@ -67,8 +89,9 @@
 
     // Profitable to continue.
     if (equity >= VALUE_RAISE && margin >= RAISE_MARGIN) {
-      return { action: 'Raise', tone: 'good',
-        reason: `Big edge — ${pct(equity)} vs ${pct(breakeven)} needed. Raise for value.` };
+      const size = raiseSize(equity, pot, call);
+      return { action: 'Raise', tone: 'good', size,
+        reason: `Big edge — ${pct(equity)} vs ${pct(breakeven)} needed. Raise for value${size ? ` (${size.note})` : ''}.` };
     }
     return { action: 'Call', tone: 'good',
       reason: `+EV call${posTag} — ${pct(equity)} vs ${pct(breakeven)} needed.` };

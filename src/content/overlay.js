@@ -173,7 +173,8 @@
 
     function setDecision(decision) {
       const d = decision || { action: '—', tone: 'neutral', reason: '' };
-      decisionAction.textContent = d.action;
+      const sized = d.size && d.size.chips > 0 ? ` → ${d.size.chips.toLocaleString()}` : '';
+      decisionAction.textContent = d.action + sized;
       decisionReason.textContent = d.reason;
       decisionBox.className = 'pno-decision pno-' + (d.tone || 'neutral');
     }

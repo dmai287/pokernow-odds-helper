@@ -8,6 +8,9 @@ poker math — see the [disclaimer](#disclaimer).
 
 - **Live equity** — estimates your win/tie/lose % vs. N random opponent hands using
   Monte Carlo simulation, updated as the board develops.
+- **Action + sizing** — a single recommendation (Fold / Check / Call / Bet / Raise);
+  when it's Bet or Raise it suggests an amount in chips, scaled to the pot and your
+  hand strength (e.g. "Raise → 420 (pot-sized)", "Bet → 158 (≈⅔ pot)").
 - **Pot odds** — enter pot size and amount to call; the panel shows the breakeven
   equity and whether a call is +EV or −EV.
 - **Expected value** — the chips a call is worth on average, `equity × (pot + call) −

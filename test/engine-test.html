@@ -113,9 +113,9 @@
     // just short of pot odds → close fold
     ok(decide({ equity: 0.30, pot: 100, call: 50 }).action === 'Fold (close)',
        'just short of pot odds → Fold (close)');
-    // no bet to call, strong equity → bet/raise
-    ok(decide({ equity: 0.70, pot: 100, call: 0 }).action === 'Bet / Raise',
-       'strong equity, no bet → Bet / Raise');
+    // no bet to call, strong equity → bet
+    ok(decide({ equity: 0.70, pot: 100, call: 0 }).action === 'Bet',
+       'strong equity, no bet → Bet');
     // no bet to call, weak equity → check
     ok(['Check', 'Check / give up'].includes(decide({ equity: 0.35, pot: 100, call: 0 }).action),
        'weak equity, no bet → Check');
@@ -133,6 +133,20 @@
     // position tag appears in the reasoning
     ok(/out of position/.test(decide({ equity: 0.45, pot: 100, call: 50, inPosition: false }).reason),
        'reason notes out of position');
+
+    // --- bet / raise sizing ---
+    // bet: very strong → ~3/4 pot
+    ok(decide({ equity: 0.80, pot: 200, call: 0 }).size.chips === 150,
+       'bet sizing: 80% equity into 200 pot → 150 (¾ pot)');
+    // bet: good value → ~2/3 pot
+    ok(decide({ equity: 0.65, pot: 300, call: 0 }).size.chips === 198,
+       'bet sizing: 65% equity into 300 pot → 198 (⅔ pot)');
+    // raise: huge edge → pot-sized (call + (pot+call))
+    ok(decide({ equity: 0.80, pot: 300, call: 60 }).size.chips === 420,
+       'raise sizing: pot-sized = call 60 + (300+60) = 420');
+    // call and fold carry no sizing
+    ok(decide({ equity: 0.40, pot: 100, call: 50 }).size == null, 'call has no size');
+    ok(decide({ equity: 0.10, pot: 100, call: 50 }).size == null, 'fold has no size');
 
     // --- draw / outs detection ---
     const fd = analyze(C('As Ks'), C('Qs 7s 2h'));
