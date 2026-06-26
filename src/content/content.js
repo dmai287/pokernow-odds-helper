@@ -25,6 +25,15 @@
       if (scraped.hero.length === 2) state.hero = scraped.hero;
       if (scraped.board.length) state.board = scraped.board;
       overlay.setCards(state.hero, state.board);
+
+      if (scraped.opponents > 0) state.opponents = scraped.opponents;
+      if (scraped.pot != null) state.pot = scraped.pot;
+      if (scraped.call != null) state.call = scraped.call;
+      overlay.setMeta(
+        scraped.opponents > 0 ? scraped.opponents : null,
+        scraped.pot,
+        scraped.call
+      );
     }
 
     if (state.hero.length !== 2) {

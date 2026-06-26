@@ -20,7 +20,16 @@
     heroContainer: '.you-player',          // the seated user's player box
     boardContainer: '.table-cards',        // community cards
     card: '.card-container',               // one element per card
+    pot: '.table-pot-size',                // pot display, e.g. "300total 450"
+    player: '.table-player',               // each seat (filtered to table-player-N)
+    bet: '.table-player-bet-value',        // a player's current-street bet
   };
+
+  // Pull all numbers out of a string (commas stripped).
+  function nums(s) {
+    const m = (s || '').replace(/,/g, '').match(/-?\d+(\.\d+)?/g);
+    return m ? m.map(Number) : [];
+  }
 
   // Read a card from a .card-container element. Returns { rank, suit } or null
   // (null for face-down / unknown cards).
@@ -62,12 +71,56 @@
     return dedupe(cards);
   }
 
+  // Total pot. The element reads like "300total 450" (main pot + total incl. current
+  // bets). The total is what matters for pot odds; fall back to the largest number.
+  function readPot() {
+    const el = document.querySelector(SELECTORS.pot);
+    if (!el) return null;
+    const txt = el.textContent || '';
+    const m = txt.match(/total\s*([\d,]+)/i);
+    if (m) return Number(m[1].replace(/,/g, ''));
+    const all = nums(txt);
+    return all.length ? Math.max(...all) : null;
+  }
+
+  function seatBet(seat) {
+    const el = seat.querySelector(SELECTORS.bet);
+    const n = el ? nums(el.textContent) : [];
+    return n.length ? n[0] : 0;
+  }
+
+  // Read seats, the amount the hero must call, and the count of live opponents.
+  function readSeats() {
+    const seats = Array.prototype.filter.call(
+      document.querySelectorAll(SELECTORS.player),
+      (s) => /\btable-player-\d+\b/.test(s.className)
+    );
+
+    let maxBet = 0, heroBet = 0, opponents = 0;
+    seats.forEach((s) => {
+      const cls = s.className;
+      const isHero = /\byou-player\b/.test(cls);
+      const folded = /\bfold\b/.test(cls);
+      const hasCards = !!s.querySelector(SELECTORS.card);
+      const bet = seatBet(s);
+      if (bet > maxBet) maxBet = bet;
+      if (isHero) heroBet = bet;
+      else if (!folded && hasCards) opponents++;
+    });
+
+    return { call: Math.max(0, maxBet - heroBet), opponents };
+  }
+
   function scrape() {
+    const seats = readSeats();
     return {
       hero: readCardsIn(SELECTORS.heroContainer).slice(0, 2),
       board: readCardsIn(SELECTORS.boardContainer).slice(0, 5),
+      pot: readPot(),
+      call: seats.call,
+      opponents: seats.opponents,
     };
   }
 
-  PNO.scraper = { scrape, SELECTORS, readContainer };
+  PNO.scraper = { scrape, SELECTORS, readContainer, readPot, readSeats };
 })();

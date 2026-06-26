@@ -148,6 +148,19 @@
       for (let i = 0; i < 5; i++) fill(board[i], boardCardsArr[i]);
     }
 
+    // Fill detected opponents / pot / call. Skips a field the user is editing, and
+    // skips null values (detection unavailable) so manual entry is preserved.
+    function setMeta(opponentsVal, potVal, callVal) {
+      const fill = (input, val) => {
+        if (val == null || document.activeElement === input) return;
+        const str = String(val);
+        if (input.value !== str) input.value = str;
+      };
+      fill(opp, opponentsVal);
+      fill(pot, potVal);
+      fill(call, callVal);
+    }
+
     function setDecision(decision) {
       const d = decision || { action: '—', tone: 'neutral', reason: '' };
       decisionAction.textContent = d.action;
@@ -175,6 +188,7 @@
       root,
       getInputs,
       setCards,
+      setMeta,
       showResult,
       onChange(fn) { changeHandler = fn; },
       setEnabled(on) { root.style.display = on ? '' : 'none'; },
