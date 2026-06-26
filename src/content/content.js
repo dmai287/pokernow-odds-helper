@@ -10,6 +10,22 @@
   };
   let settings = Object.assign({}, DEFAULTS);
   let overlay = null;
+  let observer = null;
+
+  // After the extension is reloaded, this orphaned content script keeps running but
+  // every chrome.* call throws. Detect that and shut ourselves down cleanly.
+  function extAlive() {
+    try {
+      return !!(chrome && chrome.runtime && chrome.runtime.id);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function shutdown() {
+    if (observer) { try { observer.disconnect(); } catch (e) {} observer = null; }
+    if (overlay) { try { overlay.setEnabled(false); } catch (e) {} }
+  }
 
   // Hand-history tracking: pendingHand holds the latest snapshot of the hand in
   // progress. It is committed to history when the hand ends — detected either by the
@@ -40,6 +56,7 @@
 
   function recompute() {
     if (!overlay) return;
+    if (!extAlive()) { shutdown(); return; } // orphaned after an extension reload
     const state = overlay.getInputs();
     let position = null;
     let heroStack = null;
@@ -182,7 +199,7 @@
     const debounced = debounce(recompute, 350);
     overlay.onChange(debounced);
 
-    const observer = new MutationObserver(debounced);
+    observer = new MutationObserver(debounced);
     observer.observe(document.body, {
       subtree: true,
       childList: true,

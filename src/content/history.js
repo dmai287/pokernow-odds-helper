@@ -11,22 +11,44 @@
     return 'preflop';
   }
 
+  // True only while the extension context is valid. After the extension is reloaded,
+  // an orphaned content script still runs but every chrome.* call throws
+  // "Extension context invalidated" — guard against that.
+  function isAlive() {
+    try {
+      return !!(chrome && chrome.runtime && chrome.runtime.id && chrome.storage);
+    } catch (e) {
+      return false;
+    }
+  }
+
   function add(record) {
-    if (!chrome || !chrome.storage) return;
-    chrome.storage.local.get({ [KEY]: [] }, (data) => {
-      const list = data[KEY] || [];
-      list.push(record);
-      while (list.length > CAP) list.shift();
-      chrome.storage.local.set({ [KEY]: list });
-    });
+    if (!isAlive()) return;
+    try {
+      chrome.storage.local.get({ [KEY]: [] }, (data) => {
+        try {
+          if (chrome.runtime.lastError) return;
+          const list = data[KEY] || [];
+          list.push(record);
+          while (list.length > CAP) list.shift();
+          chrome.storage.local.set({ [KEY]: list });
+        } catch (e) { /* context invalidated mid-callback */ }
+      });
+    } catch (e) { /* context invalidated */ }
   }
 
   function getAll(cb) {
-    chrome.storage.local.get({ [KEY]: [] }, (d) => cb(d[KEY] || []));
+    if (!isAlive()) { cb([]); return; }
+    try {
+      chrome.storage.local.get({ [KEY]: [] }, (d) => cb((d && d[KEY]) || []));
+    } catch (e) { cb([]); }
   }
 
   function clear(cb) {
-    chrome.storage.local.set({ [KEY]: [] }, cb || function () {});
+    if (!isAlive()) { if (cb) cb(); return; }
+    try {
+      chrome.storage.local.set({ [KEY]: [] }, cb || function () {});
+    } catch (e) { if (cb) cb(); }
   }
 
   PNO.history = { add, getAll, clear, streetName, KEY, CAP };
