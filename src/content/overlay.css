@@ -160,6 +160,17 @@
 }
 .pno-draws:empty { margin-top: 0; min-height: 0; }
 
+.pno-beats {
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: #b6c1cd;
+  line-height: 1.35;
+}
+.pno-beats-hand { color: #e8edf2; font-weight: 600; text-transform: capitalize; }
+.pno-beats-nuts { color: #6fe79f; font-weight: 600; }
+.pno-beats-threat { color: #ff8b8b; font-weight: 600; }
+.pno-beats-list { color: #8e9bab; font-size: 10px; margin-top: 2px; }
+
 .pno-coach {
   margin-top: 8px;
   padding: 6px 8px;

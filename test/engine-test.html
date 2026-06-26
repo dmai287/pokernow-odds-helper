@@ -18,6 +18,7 @@
   <script src="../src/poker/equity.js"></script>
   <script src="../src/poker/decision.js"></script>
   <script src="../src/poker/draws.js"></script>
+  <script src="../src/poker/beats.js"></script>
   <script src="../src/poker/ranges.js"></script>
   <script src="../src/poker/preflop.js"></script>
   <script src="../src/poker/leaks.js"></script>
@@ -267,6 +268,20 @@
     ok(PNO.coach.profile([]).ready === false, 'coach: not ready with too few hands');
     ok(PNO.coach.note(PNO.coach.profile([]), { street: 'river', action: 'Call' }) === null,
        'coach: no note before enough hands');
+
+    // --- "what beats you" (relative hand strength) ---
+    const beatsFn = PNO.beats.analyze;
+    ok(beatsFn(C('As Ks'), []) === null, 'beats: null pre-flop (needs a board)');
+    const royalB = beatsFn(C('As Ks'), C('Qs Js Ts'));
+    ok(royalB.ahead === 0, 'beats: royal flush is the nuts — nothing beats it');
+    ok(royalB.total === 1081, 'beats: enumerates C(47,2) = 1081 flop combos');
+    ok(royalB.tied === 0, 'beats: no holding ties the royal');
+    const weakB = beatsFn(C('2c 7d'), C('As Ks Qh'));
+    ok(weakB.ahead > weakB.behind, 'beats: 7-high is behind most holdings');
+    ok(weakB.categories.length > 0 &&
+       weakB.categories[0].cat >= weakB.categories[weakB.categories.length - 1].cat,
+       'beats: threat categories ranked strongest first');
+    ok(weakB.ahead + weakB.tied + weakB.behind === weakB.total, 'beats: counts sum to total');
 
     // --- history street naming ---
     const sn = PNO.history.streetName;

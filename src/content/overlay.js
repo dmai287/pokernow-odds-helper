@@ -113,6 +113,10 @@
     const draws = el('div', 'pno-draws', '');
     results.appendChild(draws);
 
+    const beats = el('div', 'pno-beats', '');
+    beats.style.display = 'none';
+    results.appendChild(beats);
+
     const coach = el('div', 'pno-coach', '');
     coach.style.display = 'none';
     results.appendChild(coach);
@@ -208,6 +212,21 @@
       position.className = 'pno-position ' + (pos.inPosition ? 'pno-ip' : 'pno-oop');
     }
 
+    // Render the "what beats you" breakdown (relative hand strength). Pass falsy to clear.
+    function setBeats(info) {
+      if (!info) { beats.textContent = ''; beats.style.display = 'none'; return; }
+      const aheadPct = (info.aheadPct * 100);
+      if (aheadPct < 0.05) {
+        beats.innerHTML = `<span class="pno-beats-hand">${info.heroCatName}</span> — <span class="pno-beats-nuts">the nuts ✓ nothing beats you</span>`;
+      } else {
+        const threats = info.categories.slice(0, 3).map((c) => `${c.count} ${c.name}`).join(' · ');
+        beats.innerHTML = `<span class="pno-beats-hand">${info.heroCatName}</span> · ahead of ` +
+          `${(info.behindPct * 100).toFixed(0)}% · <span class="pno-beats-threat">${aheadPct.toFixed(1)}% beat you</span>` +
+          (threats ? `<div class="pno-beats-list">↑ ${threats}</div>` : '');
+      }
+      beats.style.display = 'block';
+    }
+
     // Render a coaching nudge (from your own history). Pass falsy to clear.
     function setCoach(text) {
       coach.textContent = text ? '🎯 ' + text : '';
@@ -231,6 +250,7 @@
         barFill.style.width = '0%';
         detail.textContent = 'Enter your two hole cards to calculate';
         draws.textContent = '';
+        beats.textContent = ''; beats.style.display = 'none';
         coach.textContent = '';
         coach.style.display = 'none';
         return;
@@ -250,6 +270,7 @@
       setCards,
       setMeta,
       setDraws,
+      setBeats,
       setCoach,
       setPosition,
       setEV,

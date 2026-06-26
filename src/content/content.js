@@ -107,6 +107,7 @@
 
     const drawInfo = PNO.draws.analyze(state.hero, state.board);
     overlay.setDraws(drawInfo);
+    overlay.setBeats(PNO.beats.analyze(state.hero, state.board));
 
     // Build the villain range(s). With auto-range and a multiway bet, model the raiser
     // with a tight range and the callers with a wider one (per-villain ranges).
