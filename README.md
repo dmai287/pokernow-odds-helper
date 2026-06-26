@@ -52,6 +52,11 @@ poker math — see the [disclaimer](#disclaimer).
   a nudge relevant to the current spot (e.g. "you over-call rivers — make sure this beats
   a bluff", "you lose most out of position — lean toward folding"). It coaches *you* on
   *your* leaks — it does not profile opponents. On by default; toggle in the popup.
+- **Practice simulator (vs. AI)** — a self-contained No-Limit Hold'em table against AI
+  bots of distinct styles (rock, TAG, LAG, station, maniac). Full betting with correct
+  side pots, live advice from the same engine, and **bot profiles** (VPIP, PFR,
+  aggression factor, WTSD, net) so you can study and exploit opponents — fairly, because
+  they're code. No scraping, no real players. Opened from the popup.
 - **Draggable overlay** — a compact panel you can move and collapse.
 - **Configurable** — toggle the overlay, auto-detect, and simulation count from the
   extension popup.

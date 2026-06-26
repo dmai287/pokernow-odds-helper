@@ -41,6 +41,9 @@ chrome.storage.local.get({ handHistory: [] }, (d) => {
 document.getElementById('viewHistory').addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('src/history/history.html') });
 });
+document.getElementById('openSim').addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('src/sim/sim.html') });
+});
 
 enabled.addEventListener('change', () => chrome.storage.local.set({ enabled: enabled.checked }));
 autoDetect.addEventListener('change', () => chrome.storage.local.set({ autoDetect: autoDetect.checked }));

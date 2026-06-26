@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="sim.css">
+  <title>Practice Simulator — PokerNow Odds Helper</title>
+</head>
+<body>
+  <header class="head">
+    <h1>♠ Practice Simulator <small>vs. AI bots — sandbox, no live table</small></h1>
+    <div class="setup">
+      <label>Opponents
+        <select id="numBots"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+      </label>
+      <label><input type="checkbox" id="showAdvice" checked> Show advice</label>
+      <button id="newGame" class="btn">New game</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="felt">
+      <div id="opponents" class="opponents"></div>
+      <div class="middle">
+        <div id="board" class="board"></div>
+        <div id="pot" class="pot"></div>
+        <div id="result" class="result"></div>
+      </div>
+      <div id="hero" class="hero-seat"></div>
+      <div id="advice" class="advice"></div>
+      <div id="controls" class="controls"></div>
+    </section>
+
+    <aside class="side">
+      <div class="panel">
+        <h2>Bot profiles <small>(fair game — they're code)</small></h2>
+        <div id="stats"></div>
+      </div>
+      <div class="panel">
+        <h2>Action log</h2>
+        <div id="log" class="log"></div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="../poker/cards.js"></script>
+  <script src="../poker/evaluator.js"></script>
+  <script src="../poker/equity.js"></script>
+  <script src="../poker/ranges.js"></script>
+  <script src="../poker/preflop.js"></script>
+  <script src="../poker/draws.js"></script>
+  <script src="../poker/decision.js"></script>
+  <script src="engine.js"></script>
+  <script src="bots.js"></script>
+  <script src="sim.js"></script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Simulator engine tests</title>
+  <style>
+    body { font: 13px monospace; background:#12161c; color:#e8edf2; padding:16px; }
+    .pass { color:#6fe79f; } .fail { color:#ff8b8b; font-weight:bold; }
+  </style>
+</head>
+<body>
+  <h2>Practice-simulator engine tests</h2>
+  <div id="out"></div>
+  <script src="../src/poker/cards.js"></script>
+  <script src="../src/poker/evaluator.js"></script>
+  <script src="../src/poker/equity.js"></script>
+  <script src="../src/poker/ranges.js"></script>
+  <script src="../src/sim/engine.js"></script>
+  <script src="../src/sim/bots.js"></script>
+  <script>
+    const { parseCard } = PNO.cards;
+    const out = document.getElementById('out');
+    let passed = 0, failed = 0;
+    const C = (s) => s.split(' ').map(parseCard);
+    function ok(c, label) {
+      const d = document.createElement('div');
+      d.className = c ? 'pass' : 'fail';
+      d.textContent = (c ? '✓ ' : '✗ FAIL ') + label;
+      out.appendChild(d); c ? passed++ : failed++;
+    }
+
+    // --- side pots: short all-in stack can only win the main pot ---
+    (() => {
+      const stub = {
+        board: C('As Ks 7d 2c 9h'),
+        players: [
+          { hole: C('Kh Kd'), contributed: 200, folded: false, stack: 0 }, // trip kings
+          { hole: C('7h 7s'), contributed: 200, folded: false, stack: 0 }, // trip sevens
+          { hole: C('Ah Ad'), contributed: 50, folded: false, stack: 0 },  // trip aces (short all-in)
+        ],
+      };
+      const awards = PNO.sim.awardPots(stub);
+      const total = awards.reduce((s, a) => s + a.amount, 0);
+      ok(total === 450, 'side pots: total awarded equals total contributed (450)');
+      ok(stub.players[2].stack === 150, 'side pots: short all-in (aces) wins only the 150 main pot');
+      ok(stub.players[0].stack === 300, 'side pots: kings win the 300 side pot');
+      ok(stub.players[1].stack === 0, 'side pots: sevens win nothing');
+    })();
+
+    // --- uncontested: folded players cannot win ---
+    (() => {
+      const stub = {
+        board: C('2c 3d 4h 7s 9c'),
+        players: [
+          { hole: C('As Ah'), contributed: 30, folded: true, stack: 0 },
+          { hole: C('Ks Kh'), contributed: 30, folded: true, stack: 0 },
+          { hole: C('5c 6c'), contributed: 30, folded: false, stack: 0 },
+        ],
+      };
+      const awards = PNO.sim.awardPots(stub);
+      ok(stub.players[2].stack === 90 && awards.length === 1,
+         'uncontested: lone live player wins the whole pot despite worst cards');
+    })();
+
+    // --- full hand integration: chips are conserved ---
+    (() => {
+      const styles = PNO.bots.STYLES.slice(0, 3);
+      const g = PNO.sim.createGame({ numBots: 3, startingStack: 1000, sb: 10, bb: 20, botStyles: styles });
+      const totalChips = g.players.reduce((s, p) => s + p.stack, 0);
+      PNO.sim.startHand(g);
+      PNO.sim.advance(g);
+      let guard = 0;
+      while (g.phase !== 'handover' && g.phase !== 'gameover' && guard++ < 300) {
+        const la = PNO.sim.legalActions(g);
+        if (!la) break;
+        let act;
+        if (la.canCheck) act = { type: 'check' };
+        else if (la.canCall && la.toCall <= g.bb * 3) act = { type: 'call' };
+        else act = { type: 'fold' };
+        PNO.sim.heroAct(g, act);
+      }
+      const after = g.players.reduce((s, p) => s + p.stack, 0);
+      ok(g.phase === 'handover', 'full hand: hand reaches a result');
+      ok(after === totalChips, `full hand: chips conserved (${after} === ${totalChips})`);
+    })();
+
+    // --- many hands run without throwing or losing chips ---
+    (() => {
+      const g = PNO.sim.createGame({ numBots: 2, startingStack: 1000, sb: 10, bb: 20, botStyles: PNO.bots.STYLES.slice(0, 2) });
+      const totalChips = g.players.reduce((s, p) => s + p.stack, 0);
+      let bad = false;
+      for (let h = 0; h < 25; h++) {
+        PNO.sim.startHand(g);
+        if (g.phase === 'gameover') break;
+        PNO.sim.advance(g);
+        let guard = 0;
+        while (g.phase !== 'handover' && g.phase !== 'gameover' && guard++ < 300) {
+          const la = PNO.sim.legalActions(g);
+          if (!la) break;
+          const act = la.canCheck ? { type: 'check' } : (la.canCall && la.toCall <= g.bb * 5 ? { type: 'call' } : { type: 'fold' });
+          PNO.sim.heroAct(g, act);
+        }
+        if (g.players.reduce((s, p) => s + p.stack, 0) !== totalChips) { bad = true; break; }
+      }
+      ok(!bad, '25 hands: chips conserved every hand, no errors');
+    })();
+
+    const sum = document.createElement('h2');
+    sum.textContent = `${passed} passed, ${failed} failed`;
+    sum.style.color = failed ? '#ff8b8b' : '#6fe79f';
+    out.appendChild(sum);
+    window.__results = { passed, failed };
+  </script>
+</body>
+</html>
