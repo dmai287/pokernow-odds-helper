@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Overlay preview</title>
+  <link rel="stylesheet" href="../src/content/overlay.css">
+  <style>body { background:#1d6b3f; margin:0; height:100vh; }</style>
+</head>
+<body>
+  <script src="../src/poker/cards.js"></script>
+  <script src="../src/poker/evaluator.js"></script>
+  <script src="../src/poker/equity.js"></script>
+  <script src="../src/poker/decision.js"></script>
+  <script src="../src/content/scraper.js"></script>
+  <script src="../src/content/overlay.js"></script>
+  <script>
+    // Render the overlay with a realistic scenario (no content.js / chrome APIs needed).
+    const ov = PNO.overlay.create();
+    const hero = PNO.cards.parseCard('As'), hero2 = PNO.cards.parseCard('Ks');
+    const board = ['Qs','Js','7d'].map(PNO.cards.parseCard);
+    ov.setCards([hero, hero2], board);
+    const res = PNO.equity.monteCarlo([hero, hero2], board, 2, 3000);
+    const decision = PNO.decision.decide({ equity: res.equity, pot: 100, call: 30, opponents: 2 });
+    ov.showResult(res, decision);
+    window.__rendered = { action: decision.action, equity: res.equity };
+  </script>
+</body>
+</html>

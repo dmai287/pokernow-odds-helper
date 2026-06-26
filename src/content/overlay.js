@@ -80,6 +80,15 @@
 
     // Results
     const results = el('div', 'pno-results');
+
+    // Suggested action (the headline)
+    const decisionBox = el('div', 'pno-decision');
+    const decisionAction = el('div', 'pno-decision-action', '—');
+    const decisionReason = el('div', 'pno-decision-reason', 'Enter your hole cards to get a suggestion.');
+    decisionBox.appendChild(decisionAction);
+    decisionBox.appendChild(decisionReason);
+    results.appendChild(decisionBox);
+
     const equityLine = el('div', 'pno-equity');
     const equityVal = el('span', 'pno-equity-val', '—');
     equityLine.appendChild(el('span', 'pno-equity-label', 'Equity '));
@@ -93,9 +102,6 @@
 
     const detail = el('div', 'pno-detail', 'Win — · Tie — · Lose —');
     results.appendChild(detail);
-
-    const advice = el('div', 'pno-advice', '');
-    results.appendChild(advice);
 
     body.appendChild(results);
 
@@ -142,13 +148,19 @@
       for (let i = 0; i < 5; i++) fill(board[i], boardCardsArr[i]);
     }
 
-    function showResult(res, breakeven) {
+    function setDecision(decision) {
+      const d = decision || { action: '—', tone: 'neutral', reason: '' };
+      decisionAction.textContent = d.action;
+      decisionReason.textContent = d.reason;
+      decisionBox.className = 'pno-decision pno-' + (d.tone || 'neutral');
+    }
+
+    function showResult(res, decision) {
+      setDecision(decision);
       if (!res) {
         equityVal.textContent = '—';
         barFill.style.width = '0%';
         detail.textContent = 'Enter your two hole cards to calculate';
-        advice.textContent = '';
-        advice.className = 'pno-advice';
         return;
       }
       const pct = (res.equity * 100);
@@ -157,20 +169,6 @@
       detail.textContent =
         `Win ${(res.win * 100).toFixed(1)}% · Tie ${(res.tie * 100).toFixed(1)}% · ` +
         `Lose ${(res.lose * 100).toFixed(1)}% · ${res.iterations.toLocaleString()} sims`;
-
-      if (breakeven != null) {
-        const bePct = breakeven * 100;
-        if (res.equity >= breakeven) {
-          advice.textContent = `Call is +EV — need ${bePct.toFixed(1)}%, have ${pct.toFixed(1)}%`;
-          advice.className = 'pno-advice pno-good';
-        } else {
-          advice.textContent = `Call is −EV — need ${bePct.toFixed(1)}%, have ${pct.toFixed(1)}%`;
-          advice.className = 'pno-advice pno-bad';
-        }
-      } else {
-        advice.textContent = '';
-        advice.className = 'pno-advice';
-      }
     }
 
     return {

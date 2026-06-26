@@ -28,13 +28,20 @@
     }
 
     if (state.hero.length !== 2) {
-      overlay.showResult(null, null);
+      overlay.showResult(null, PNO.decision.decide({ equity: null }));
       return;
     }
 
     const res = PNO.equity.monteCarlo(state.hero, state.board, state.opponents, settings.iterations);
-    const breakeven = PNO.equity.potOdds(state.pot, state.call);
-    overlay.showResult(res, breakeven);
+    const decision = res
+      ? PNO.decision.decide({
+          equity: res.equity,
+          pot: state.pot,
+          call: state.call,
+          opponents: state.opponents,
+        })
+      : { action: '—', tone: 'bad', reason: 'Duplicate card detected — check your inputs.' };
+    overlay.showResult(res, decision);
   }
 
   function start() {

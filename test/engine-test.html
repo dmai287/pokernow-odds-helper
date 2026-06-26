@@ -16,10 +16,12 @@
   <script src="../src/poker/cards.js"></script>
   <script src="../src/poker/evaluator.js"></script>
   <script src="../src/poker/equity.js"></script>
+  <script src="../src/poker/decision.js"></script>
   <script>
     const { parseCard } = PNO.cards;
     const { evaluate } = PNO.evaluator;
     const { monteCarlo, potOdds } = PNO.equity;
+    const { decide } = PNO.decision;
     const out = document.getElementById('out');
     let passed = 0, failed = 0;
 
@@ -88,6 +90,28 @@
     // --- pot odds ---
     approx(potOdds(100, 50), 1/3, 0.0001, 'pot 100 call 50 → 33.3%');
     approx(potOdds(150, 50), 0.25, 0.0001, 'pot 150 call 50 → 25%');
+
+    // --- decision engine ---
+    // facing a bet, equity below pot odds → fold
+    ok(decide({ equity: 0.20, pot: 100, call: 50 }).action === 'Fold',
+       'low equity vs bet → Fold');
+    // facing a bet, equity above pot odds → call
+    ok(decide({ equity: 0.45, pot: 100, call: 50, opponents: 1 }).action === 'Call',
+       'enough equity vs bet → Call');
+    // huge edge vs a bet → raise
+    ok(decide({ equity: 0.85, pot: 100, call: 20 }).action === 'Raise',
+       'big edge vs bet → Raise');
+    // just short of pot odds → close fold
+    ok(decide({ equity: 0.30, pot: 100, call: 50 }).action === 'Fold (close)',
+       'just short of pot odds → Fold (close)');
+    // no bet to call, strong equity → bet/raise
+    ok(decide({ equity: 0.70, pot: 100, call: 0 }).action === 'Bet / Raise',
+       'strong equity, no bet → Bet / Raise');
+    // no bet to call, weak equity → check
+    ok(['Check', 'Check / give up'].includes(decide({ equity: 0.35, pot: 100, call: 0 }).action),
+       'weak equity, no bet → Check');
+    // no cards → neutral placeholder
+    ok(decide({ equity: null }).tone === 'neutral', 'no cards → neutral');
 
     const summary = document.createElement('h2');
     summary.innerHTML = `<br>${passed} passed, ${failed} failed`;
