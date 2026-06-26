@@ -12,6 +12,9 @@ poker math — see the [disclaimer](#disclaimer).
   equity and whether a call is +EV or −EV.
 - **Outs & draws** — on the flop/turn, labels your flush draws, open-enders, and
   gutshots, counts deduped outs, and estimates the chance to hit by the river.
+- **Opponent ranges** — model villains as holding a "top X%" range instead of any two
+  cards (Chen-formula ranking), for more realistic equity when facing bets. Adjustable
+  in the popup; 100% = any two cards.
 - **Auto-detect** — reads your hole cards and the board from the table when possible,
   with manual entry as a fallback (type cards like `As`, `Td`, `9c`).
 - **Draggable overlay** — a compact panel you can move and collapse.

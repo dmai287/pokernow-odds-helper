@@ -34,6 +34,7 @@ h1 { font-size: 15px; }
 .field { flex-direction: column; align-items: stretch; gap: 8px; }
 .field span { display: flex; justify-content: space-between; color: #cfd8e2; }
 .field small { color: #6fe79f; font-weight: 600; }
+.field small.muted { color: #6b7785; font-weight: 400; font-size: 9.5px; }
 
 input[type="range"] { width: 100%; accent-color: #6fe79f; }
 input[type="checkbox"] { width: 16px; height: 16px; accent-color: #6fe79f; }

@@ -14,9 +14,25 @@
     return deck;
   }
 
-  // Estimate hero equity vs `opponents` random hands by simulation.
-  // hole: 2 cards, board: 0..5 cards. Returns { equity, win, tie, lose, iterations }.
-  function monteCarlo(hole, board, opponents, iterations) {
+  // Draw `count` cards from pool[0..len) without replacement (swap-remove). Returns
+  // the new length. Drawn cards are placed at the end (pool[len-count..len)).
+  function drawCards(pool, len, count, dest) {
+    for (let i = 0; i < count; i++) {
+      const j = Math.floor(Math.random() * len);
+      dest.push(pool[j]);
+      len--;
+      pool[j] = pool[len];
+      pool[len] = dest[dest.length - 1];
+    }
+    return len;
+  }
+
+  // Estimate hero equity vs `opponents` hands by simulation.
+  // hole: 2 cards, board: 0..5 cards.
+  // villainRange: optional Set of hand keys (from PNO.ranges) restricting opponent
+  //   hands; null/undefined = any two cards (random).
+  // Returns { equity, win, tie, lose, iterations }.
+  function monteCarlo(hole, board, opponents, iterations, villainRange) {
     if (!hole || hole.length !== 2) return null;
     opponents = Math.max(1, opponents | 0);
     iterations = Math.max(100, iterations | 0);
@@ -26,30 +42,50 @@
     for (const c of board) dead.add(cardId(c));
     if (dead.size !== hole.length + board.length) return null; // duplicate card detected
 
-    const deck = buildDeck(dead);
+    const baseDeck = buildDeck(dead);
     const needBoard = 5 - board.length;
-    const need = needBoard + opponents * 2;
-    if (need > deck.length) return null;
+    if (needBoard + opponents * 2 > baseDeck.length) return null;
+
+    const inRange = (PNO.ranges && villainRange) ? PNO.ranges.inRange : null;
+    const MAX_TRIES = 40; // rejection-sampling cap before falling back to any-two-cards
 
     let equitySum = 0, win = 0, tie = 0, lose = 0;
+    const pool = baseDeck.slice();
 
     for (let it = 0; it < iterations; it++) {
-      // Partial Fisher-Yates: draw the first `need` cards from a fresh shuffle prefix.
-      for (let i = 0; i < need; i++) {
-        const j = i + Math.floor(Math.random() * (deck.length - i));
-        const tmp = deck[i]; deck[i] = deck[j]; deck[j] = tmp;
-      }
+      // Refill the working pool each iteration.
+      for (let i = 0; i < baseDeck.length; i++) pool[i] = baseDeck[i];
+      let len = baseDeck.length;
 
-      let idx = 0;
-      const fullBoard = board.slice();
-      for (let i = 0; i < needBoard; i++) fullBoard.push(deck[idx++]);
-
+      const drawn = [];
+      len = drawCards(pool, len, needBoard, drawn);
+      const fullBoard = board.concat(drawn);
       const heroScore = evaluate(hole.concat(fullBoard));
 
       let oppMax = -1, oppTies = 0;
       for (let o = 0; o < opponents; o++) {
-        const oc = [deck[idx++], deck[idx++]];
-        const sc = evaluate(oc.concat(fullBoard));
+        let a, b;
+        if (inRange) {
+          // Rejection-sample a two-card hand within the villain's range. The pool is
+          // left untouched while rejecting, so ia/ib stay valid until we accept.
+          let tries = 0, ok = false, ia = 0, ib = 1;
+          do {
+            ia = Math.floor(Math.random() * len);
+            ib = Math.floor(Math.random() * (len - 1));
+            if (ib >= ia) ib++;
+            a = pool[ia]; b = pool[ib];
+            ok = inRange(villainRange, a, b);
+          } while (!ok && ++tries < MAX_TRIES);
+          // Remove both by swap-remove, higher index first to keep loI valid.
+          const hiI = Math.max(ia, ib), loI = Math.min(ia, ib);
+          len--; pool[hiI] = pool[len];
+          len--; pool[loI] = pool[len];
+        } else {
+          const t = [];
+          len = drawCards(pool, len, 2, t);
+          a = t[0]; b = t[1];
+        }
+        const sc = evaluate([a, b].concat(fullBoard));
         if (sc > oppMax) { oppMax = sc; oppTies = 1; }
         else if (sc === oppMax) { oppTies++; }
       }

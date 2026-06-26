@@ -181,7 +181,7 @@
       draws.textContent = `${labels} · ${info.outs} outs · ${info.note}`;
     }
 
-    function showResult(res, decision) {
+    function showResult(res, decision, rangeLabel) {
       setDecision(decision);
       if (!res) {
         equityVal.textContent = '—';
@@ -195,7 +195,8 @@
       barFill.style.width = Math.max(0, Math.min(100, pct)) + '%';
       detail.textContent =
         `Win ${(res.win * 100).toFixed(1)}% · Tie ${(res.tie * 100).toFixed(1)}% · ` +
-        `Lose ${(res.lose * 100).toFixed(1)}% · ${res.iterations.toLocaleString()} sims`;
+        `Lose ${(res.lose * 100).toFixed(1)}% · ${res.iterations.toLocaleString()} sims` +
+        (rangeLabel ? ` · vs ${rangeLabel}` : '');
     }
 
     return {

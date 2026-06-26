@@ -18,12 +18,14 @@
   <script src="../src/poker/equity.js"></script>
   <script src="../src/poker/decision.js"></script>
   <script src="../src/poker/draws.js"></script>
+  <script src="../src/poker/ranges.js"></script>
   <script>
     const { parseCard } = PNO.cards;
     const { evaluate } = PNO.evaluator;
     const { monteCarlo, potOdds } = PNO.equity;
     const { decide } = PNO.decision;
     const { analyze } = PNO.draws;
+    const { topPercent, handKey, inRange } = PNO.ranges;
     const out = document.getElementById('out');
     let passed = 0, failed = 0;
 
@@ -131,6 +133,23 @@
     ok(analyze(C('As Kd'), C('2c 7h Js')).outs === 0, 'no draw = 0 outs');
     ok(analyze(C('9s 8s'), C('7s 6s 2c 3h Kd')).draws.length === 0, 'no draws on the river');
     ok(analyze(C('As Ks'), C('Qs Js Ts')).draws.length === 0, 'made straight = no draw');
+
+    // --- ranges ---
+    ok(handKey(parseCard('As'), parseCard('Ah')) === '14-14-p', 'handKey pair');
+    ok(handKey(parseCard('As'), parseCard('Ks')) === '14-13-s', 'handKey suited');
+    ok(handKey(parseCard('As'), parseCard('Kh')) === '14-13-o', 'handKey offsuit');
+    ok(topPercent(1) === null, 'top 100% = null (any two cards)');
+    const top5 = topPercent(0.05), top20 = topPercent(0.20);
+    ok(top5.has('14-14-p'), 'AA in top 5%');
+    ok(!top5.has('7-2-o'), '72o not in top 5%');
+    ok([...top5].every((k) => top20.has(k)), 'top 5% is a subset of top 20%');
+    ok(inRange(top20, parseCard('As'), parseCard('Ks')), 'AKs in top 20%');
+    ok(!inRange(top5, parseCard('9c'), parseCard('4d')), '94o not in top 5%');
+    // Range-based equity: AA's equity is lower vs a tight range than vs random hands.
+    const aaRandom = monteCarlo(C('As Ah'), [], 1, 8000, null).equity;
+    const aaTight = monteCarlo(C('As Ah'), [], 1, 8000, topPercent(0.10)).equity;
+    ok(aaRandom - aaTight > 0.01,
+       `AA equity lower vs tight range (rand ${aaRandom.toFixed(3)} > tight ${aaTight.toFixed(3)})`);
 
     const summary = document.createElement('h2');
     summary.innerHTML = `<br>${passed} passed, ${failed} failed`;
