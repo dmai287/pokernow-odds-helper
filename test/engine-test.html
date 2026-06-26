@@ -20,6 +20,7 @@
   <script src="../src/poker/draws.js"></script>
   <script src="../src/poker/beats.js"></script>
   <script src="../src/poker/ranges.js"></script>
+  <script src="../src/poker/composition.js"></script>
   <script src="../src/poker/preflop.js"></script>
   <script src="../src/poker/leaks.js"></script>
   <script src="../src/poker/coach.js"></script>
@@ -292,6 +293,21 @@
        'beats: A♠ blocks the nut flush on a spade board');
     ok(beatsFn(C('2c 7d'), C('Qs Js 7s')).blocks.length === 0,
        'beats: no spade in hand → no flush blocker');
+
+    // --- preflop range composition ---
+    const comp = PNO.composition.analyze;
+    ok(comp(null) === null, 'composition: null with no range');
+    const tightComp = comp(topPercent(0.06)); // a tight range
+    const bucketNames = tightComp.buckets.map((b) => b.name);
+    ok(bucketNames.indexOf('pairs') !== -1 && bucketNames.indexOf('high cards') !== -1,
+       'composition: tight range is mostly pairs + high cards');
+    const sumPct = tightComp.buckets.reduce((s, b) => s + b.pct, 0);
+    ok(Math.abs(sumPct - 1) < 0.001, 'composition: bucket percentages sum to 100%');
+    // domination: a weak hand is dominated by most of a tight range; AA by almost none
+    const weakDom = comp(topPercent(0.10), C('7c 2d')).strongerPct;
+    const aaDom = comp(topPercent(0.10), C('As Ah')).strongerPct;
+    ok(weakDom > 0.8, '72o is a weaker starting hand than most of a tight range');
+    ok(aaDom < 0.05, 'AA: almost nothing in the range is stronger');
 
     // --- history street naming ---
     const sn = PNO.history.streetName;

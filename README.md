@@ -14,6 +14,9 @@ poker math — see the [disclaimer](#disclaimer).
 - **Preflop advisor** — before the flop, advice is based on position and starting-hand
   strength (open-raise / call / 3-bet / fold) rather than raw equity, using
   position-aware opening ranges and a tighter range vs. a raise.
+- **Range composition** — preflop, breaks the villain's inferred range (from their
+  action) into categories — e.g. "30% pairs · 55% high cards · 15% suited" — and the
+  share that's a stronger starting hand than yours, so you can see if you're dominated.
 - **Semi-bluffs & fold equity** — with a strong draw (≈8+ outs) and nothing to call, the
   advice is "Bet (semi-bluff)" instead of a passive check, and shows the fold equity a
   bluff needs to profit — so you're not winning by value-betting alone.

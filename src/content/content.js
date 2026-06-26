@@ -134,6 +134,11 @@
     const beatsRange = Array.isArray(villainRange) ? villainRange[0] : villainRange;
     overlay.setBeats(PNO.beats.analyze(state.hero, state.board, beatsRange));
 
+    // Preflop: show the villain's range composition (high vs low) from their action.
+    overlay.setComposition(
+      state.board.length === 0 ? PNO.composition.analyze(beatsRange, state.hero) : null
+    );
+
     const res = PNO.equity.monteCarlo(
       state.hero, state.board, state.opponents, settings.iterations, villainRange
     );

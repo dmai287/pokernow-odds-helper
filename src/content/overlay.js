@@ -117,6 +117,10 @@
     beats.style.display = 'none';
     results.appendChild(beats);
 
+    const composition = el('div', 'pno-comp', '');
+    composition.style.display = 'none';
+    results.appendChild(composition);
+
     const coach = el('div', 'pno-coach', '');
     coach.style.display = 'none';
     results.appendChild(coach);
@@ -231,6 +235,17 @@
       beats.style.display = 'block';
     }
 
+    // Render the villain's preflop range composition. Pass falsy to clear.
+    function setComposition(info) {
+      if (!info) { composition.textContent = ''; composition.style.display = 'none'; return; }
+      const parts = info.buckets.map((b) => `${Math.round(b.pct * 100)}% ${b.name}`).join(' · ');
+      composition.innerHTML = `<span class="pno-comp-label">Their range</span> ${parts}` +
+        (info.strongerPct != null
+          ? `<div class="pno-comp-dom"><span class="pno-comp-threat">${Math.round(info.strongerPct * 100)}%</span> is a stronger starting hand than yours</div>`
+          : '');
+      composition.style.display = 'block';
+    }
+
     // Render a coaching nudge (from your own history). Pass falsy to clear.
     function setCoach(text) {
       coach.textContent = text ? '🎯 ' + text : '';
@@ -255,6 +270,7 @@
         detail.textContent = 'Enter your two hole cards to calculate';
         draws.textContent = '';
         beats.textContent = ''; beats.style.display = 'none';
+        composition.textContent = ''; composition.style.display = 'none';
         coach.textContent = '';
         coach.style.display = 'none';
         return;
@@ -275,6 +291,7 @@
       setMeta,
       setDraws,
       setBeats,
+      setComposition,
       setCoach,
       setPosition,
       setEV,
