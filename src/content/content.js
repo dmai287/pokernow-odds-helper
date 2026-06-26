@@ -19,6 +19,7 @@
   function recompute() {
     if (!overlay) return;
     const state = overlay.getInputs();
+    let position = null;
 
     if (settings.autoDetect) {
       const scraped = PNO.scraper.scrape();
@@ -37,7 +38,9 @@
         scraped.pot,
         scraped.call
       );
+      position = scraped.position;
     }
+    overlay.setPosition(position);
 
     if (state.hero.length !== 2) {
       overlay.setDraws(null);
@@ -58,6 +61,7 @@
           pot: state.pot,
           call: state.call,
           opponents: state.opponents,
+          inPosition: position ? position.inPosition : undefined,
         })
       : { action: '—', tone: 'bad', reason: 'Duplicate card detected — check your inputs.' };
     const rangeLabel = villainRange ? `top ${Math.round(pct * 100)}%` : 'any two';

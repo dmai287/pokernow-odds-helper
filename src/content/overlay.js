@@ -81,6 +81,10 @@
     // Results
     const results = el('div', 'pno-results');
 
+    // Position (filled by auto-detect)
+    const position = el('div', 'pno-position', '');
+    results.appendChild(position);
+
     // Suggested action (the headline)
     const decisionBox = el('div', 'pno-decision');
     const decisionAction = el('div', 'pno-decision-action', '—');
@@ -171,6 +175,17 @@
       decisionBox.className = 'pno-decision pno-' + (d.tone || 'neutral');
     }
 
+    // Render hero position. Pass a falsy value to clear.
+    function setPosition(pos) {
+      if (!pos || !pos.name) {
+        position.textContent = '';
+        position.className = 'pno-position';
+        return;
+      }
+      position.textContent = `${pos.name} · ${pos.inPosition ? 'in position' : 'out of position'}`;
+      position.className = 'pno-position ' + (pos.inPosition ? 'pno-ip' : 'pno-oop');
+    }
+
     // Render draw info (flush/straight outs). Pass a falsy value to clear.
     function setDraws(info) {
       if (!info || !info.draws || !info.draws.length) {
@@ -205,6 +220,7 @@
       setCards,
       setMeta,
       setDraws,
+      setPosition,
       showResult,
       onChange(fn) { changeHandler = fn; },
       setEnabled(on) { root.style.display = on ? '' : 'none'; },

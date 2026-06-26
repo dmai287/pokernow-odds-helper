@@ -23,7 +23,66 @@
     pot: '.table-pot-size',                // pot display, e.g. "300total 450"
     player: '.table-player',               // each seat (filtered to table-player-N)
     bet: '.table-player-bet-value',        // a player's current-street bet
+    dealer: '[class*="dealer-position-"]', // button; class encodes seat (dealer-position-N)
   };
+
+  function seatNumber(el) {
+    const m = el.className.match(/table-player-(\d+)/);
+    return m ? Number(m[1]) : null;
+  }
+
+  // Order seats clockwise starting just after the button; the last entry is the last
+  // to act postflop. Returns that ordered array.
+  function actionRing(seats, button) {
+    const sorted = seats.slice().sort((a, b) => a - b);
+    return sorted.filter((s) => s > button).concat(sorted.filter((s) => s <= button));
+  }
+
+  // Hero's table position and whether hero is in position (acts last postflop).
+  // Returns { name, inPosition } or null if it can't be determined.
+  function readPosition() {
+    const btnEl = document.querySelector(SELECTORS.dealer);
+    const bm = btnEl && btnEl.className.match(/dealer-position-(\d+)/);
+    if (!bm) return null;
+    const button = Number(bm[1]);
+
+    const heroEl = document.querySelector(SELECTORS.heroContainer);
+    const heroSeat = heroEl && seatNumber(heroEl);
+    if (!heroSeat) return null;
+
+    const occupied = [], live = [];
+    Array.prototype.forEach.call(document.querySelectorAll(SELECTORS.player), (s) => {
+      if (!/\btable-player-\d+\b/.test(s.className)) return;
+      const seat = seatNumber(s);
+      if (!seat) return;
+      const folded = /\bfold\b/.test(s.className);
+      const hasCards = !!s.querySelector(SELECTORS.card);
+      const nameEl = s.querySelector('[class*="name"]');
+      const hasName = nameEl && (nameEl.textContent || '').trim().length > 0;
+      if (hasCards || hasName) {
+        occupied.push(seat);
+        if (!folded) live.push(seat);
+      }
+    });
+    if (occupied.indexOf(heroSeat) < 0 || live.length < 2) return null;
+
+    // In position = hero acts last among players still in the hand.
+    const liveRing = actionRing(live, button);
+    const inPosition = liveRing[liveRing.length - 1] === heroSeat;
+
+    // Name from the full seated ring (accurate preflop; blinds shift once folds occur).
+    const occRing = actionRing(occupied, button);
+    const idx = occRing.indexOf(heroSeat);
+    const n = occRing.length;
+    let name;
+    if (heroSeat === button) name = 'Button';
+    else if (idx === 0) name = 'Small blind';
+    else if (idx === 1) name = 'Big blind';
+    else if (idx === n - 1) name = 'Cutoff';
+    else name = 'Early/Middle';
+
+    return { name, inPosition };
+  }
 
   // Pull all numbers out of a string (commas stripped).
   function nums(s) {
@@ -119,8 +178,9 @@
       pot: readPot(),
       call: seats.call,
       opponents: seats.opponents,
+      position: readPosition(),
     };
   }
 
-  PNO.scraper = { scrape, SELECTORS, readContainer, readPot, readSeats };
+  PNO.scraper = { scrape, SELECTORS, readContainer, readPot, readSeats, readPosition };
 })();

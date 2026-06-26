@@ -117,6 +117,18 @@
     // no cards → neutral placeholder
     ok(decide({ equity: null }).tone === 'neutral', 'no cards → neutral');
 
+    // --- position adjustment ---
+    // equity 0.35 vs pot 100 / call 50 (breakeven 33.3%): marginal spot
+    ok(decide({ equity: 0.35, pot: 100, call: 50 }).action === 'Call',
+       'marginal spot, unknown position → Call');
+    ok(decide({ equity: 0.35, pot: 100, call: 50, inPosition: false }).action.startsWith('Fold'),
+       'same spot out of position → Fold');
+    ok(decide({ equity: 0.35, pot: 100, call: 50, inPosition: true }).action === 'Call',
+       'same spot in position → Call');
+    // position tag appears in the reasoning
+    ok(/out of position/.test(decide({ equity: 0.45, pot: 100, call: 50, inPosition: false }).reason),
+       'reason notes out of position');
+
     // --- draw / outs detection ---
     const fd = analyze(C('As Ks'), C('Qs 7s 2h'));
     ok(fd.draws.some(d => d.name === 'Flush draw' && d.outs === 9) && fd.outs === 9,

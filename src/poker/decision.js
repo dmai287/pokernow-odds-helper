@@ -13,49 +13,56 @@
   const THIN_BET = 0.50;      // marginal → still worth a bet vs one opponent
   const RAISE_MARGIN = 0.15;  // equity must clear pot odds by this much to raise
   const CLOSE_FOLD = 0.05;    // within this of pot odds = a "close" fold
+  const POS_CUSHION = 0.03;   // equity realization: out of position needs a bit more
 
-  // input: { equity, pot, call, opponents }
+  // input: { equity, pot, call, opponents, inPosition }
+  //   inPosition: true (acts last), false (out of position), or undefined (unknown)
   // returns: { action, tone: 'good'|'neutral'|'bad', reason }
   function decide(input) {
     const equity = input.equity;
     const pot = Number(input.pot) || 0;
     const call = Number(input.call) || 0;
     const heads = (input.opponents || 1) <= 1;
+    const ip = input.inPosition; // true / false / undefined
+    const posTag = ip === true ? ' (in position)' : ip === false ? ' (out of position)' : '';
 
     if (equity == null) {
       return { action: '—', tone: 'neutral', reason: 'Enter your hole cards.' };
     }
 
-    // No bet to call: choose between betting/checking.
+    // No bet to call: choose between betting/checking. In position you can bet thinner.
     if (call <= 0) {
       if (equity >= VALUE_BET) {
         return { action: 'Bet / Raise', tone: 'good',
           reason: `Strong equity (${pct(equity)}) — bet for value.` };
       }
-      if (heads && equity >= THIN_BET) {
+      if ((heads || ip === true) && equity >= THIN_BET) {
         return { action: 'Bet (thin)', tone: 'neutral',
-          reason: `Slight edge (${pct(equity)}) heads-up — a thin value bet is fine, or check.` };
+          reason: `Slight edge (${pct(equity)})${posTag} — a thin value bet is fine, or check.` };
       }
       if (equity >= 0.40) {
         return { action: 'Check', tone: 'neutral',
-          reason: `Middling equity (${pct(equity)}) — check and keep the pot small.` };
+          reason: `Middling equity (${pct(equity)})${posTag} — check and keep the pot small.` };
       }
       return { action: 'Check / give up', tone: 'bad',
         reason: `Weak equity (${pct(equity)}) — check; fold to pressure.` };
     }
 
-    // Facing a bet: compare equity to the pot-odds breakeven.
+    // Facing a bet: compare equity to pot odds, adjusted for position. Out of position
+    // you realize less of your equity, so require a small cushion; in position, less.
     const breakeven = call / (pot + call);
+    const cushion = ip === true ? -POS_CUSHION : ip === false ? POS_CUSHION : 0;
+    const needed = Math.max(0, breakeven + cushion);
     const margin = equity - breakeven;
 
-    if (equity < breakeven) {
-      if (breakeven - equity <= CLOSE_FOLD) {
+    if (equity < needed) {
+      if (needed - equity <= CLOSE_FOLD) {
         return { action: 'Fold (close)', tone: 'bad',
-          reason: `Just short of pot odds — need ${pct(breakeven)}, have ${pct(equity)}. ` +
-                  `Fold unless implied odds are strong.` };
+          reason: `Just short${posTag} — need ~${pct(needed)} (pot odds ${pct(breakeven)}), ` +
+                  `have ${pct(equity)}.` };
       }
       return { action: 'Fold', tone: 'bad',
-        reason: `Below pot odds — need ${pct(breakeven)}, have ${pct(equity)}.` };
+        reason: `Below pot odds${posTag} — need ${pct(breakeven)}, have ${pct(equity)}.` };
     }
 
     // Profitable to continue.
@@ -64,7 +71,7 @@
         reason: `Big edge — ${pct(equity)} vs ${pct(breakeven)} needed. Raise for value.` };
     }
     return { action: 'Call', tone: 'good',
-      reason: `+EV call — ${pct(equity)} vs ${pct(breakeven)} needed.` };
+      reason: `+EV call${posTag} — ${pct(equity)} vs ${pct(breakeven)} needed.` };
   }
 
   PNO.decision = { decide };
