@@ -11,9 +11,23 @@
   let overlay = null;
 
   // Hand-history tracking: pendingHand holds the latest snapshot of the hand in
-  // progress; it is committed to history when the hand ends (hole cards clear).
+  // progress. It is committed to history when the hand ends — detected either by the
+  // hole cards clearing, or by a new hand being dealt (different hole cards). The
+  // latter is the reliable signal: tables often replace cards with no settled gap.
   let pendingHand = null;
+  let pendingHeroKey = null;
   let handStartStack = null;
+
+  function commitHand(endStack) {
+    if (!pendingHand) return;
+    if (typeof endStack === 'number') pendingHand.endStack = endStack;
+    pendingHand.net = (typeof handStartStack === 'number' && typeof pendingHand.endStack === 'number')
+      ? pendingHand.endStack - handStartStack : null;
+    PNO.history.add(pendingHand);
+    pendingHand = null;
+    pendingHeroKey = null;
+    handStartStack = null;
+  }
 
   function debounce(fn, ms) {
     let t = null;
@@ -54,15 +68,8 @@
     overlay.setPosition(position);
 
     if (state.hero.length !== 2) {
-      // Hand over: commit the last snapshot to history.
-      if (settings.autoDetect && pendingHand) {
-        pendingHand.endStack = heroStack;
-        pendingHand.net = (typeof handStartStack === 'number' && typeof heroStack === 'number')
-          ? heroStack - handStartStack : null;
-        PNO.history.add(pendingHand);
-      }
-      pendingHand = null;
-      handStartStack = null;
+      // Hand over (cards cleared): commit the last snapshot.
+      if (settings.autoDetect) commitHand(heroStack);
 
       overlay.setDraws(null);
       overlay.setEV(null);
@@ -114,7 +121,12 @@
 
     // Update the hand-in-progress snapshot (committed to history when the hand ends).
     if (settings.autoDetect) {
+      const heroKey = state.hero.map(PNO.cards.cardToStr).join('');
+      // New hand dealt (different hole cards): commit the previous one. The current
+      // stack already reflects that hand's result, so it serves as the end stack.
+      if (pendingHand && pendingHeroKey !== heroKey) commitHand(heroStack);
       if (pendingHand === null) handStartStack = heroStack; // first tick of a new hand
+      pendingHeroKey = heroKey;
       pendingHand = {
         t: Date.now(),
         hero: state.hero.map(PNO.cards.cardToStr),
@@ -129,6 +141,7 @@
         action: decision.action + (decision.size && decision.size.chips > 0 ? ` → ${decision.size.chips}` : ''),
         ev,
         range: rangeLabel,
+        endStack: heroStack,
       };
     }
   }
