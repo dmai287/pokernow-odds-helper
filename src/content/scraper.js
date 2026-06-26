@@ -192,6 +192,14 @@
     return n.length ? n[n.length - 1] : null;
   }
 
+  // Whether it's the hero's turn to act. PokerNow marks the acting seat with the
+  // "decision-current" class. Returns true / false, or null if hero isn't seated.
+  function readMyTurn() {
+    const hero = document.querySelector(SELECTORS.heroContainer);
+    if (!hero) return null;
+    return hero.classList.contains('decision-current');
+  }
+
   function scrape() {
     const seats = readSeats();
     return {
@@ -203,6 +211,7 @@
       position: readPosition(),
       heroStack: readHeroStack(),
       bb: readBigBlind(),
+      myTurn: readMyTurn(),
     };
   }
 

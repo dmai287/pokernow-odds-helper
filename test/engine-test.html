@@ -195,6 +195,26 @@
     ok(tightnessFromAction(300, 200, 3) < tightnessFromAction(130, 30, 3),
        'bigger bet ⇒ tighter range');
 
+    // --- per-villain ranges (array form of monteCarlo) ---
+    const r10 = topPercent(0.10), r80 = topPercent(0.80);
+    const eqTight2 = monteCarlo(C('As Ah'), [], 2, 5000, [r10, r10]).equity;
+    const eqLoose2 = monteCarlo(C('As Ah'), [], 2, 5000, [r80, r80]).equity;
+    const eqMixed2 = monteCarlo(C('As Ah'), [], 2, 5000, [r10, r80]).equity;
+    ok(eqLoose2 - eqTight2 > 0.01,
+       `AA equity lower vs two tight ranges (tight ${eqTight2.toFixed(3)} < loose ${eqLoose2.toFixed(3)})`);
+    ok(eqMixed2 > 0 && eqMixed2 < 1, 'mixed per-villain range returns a valid equity');
+
+    // --- implied odds (draw makes a −EV call playable when stacks are deep) ---
+    // equity 30% vs pot 100 / call 50 (breakeven 33.3%) — folds without a draw...
+    ok(decide({ equity: 0.30, pot: 100, call: 50 }).action.startsWith('Fold'),
+       '−EV with no draw → Fold');
+    // ...but a 9-out draw with a deep stack behind → Call (implied)
+    ok(decide({ equity: 0.30, pot: 100, call: 50, outs: 9, effStack: 1000 }).action === 'Call (implied)',
+       '−EV draw with deep stack → Call (implied)');
+    // a draw but almost no stack behind → still Fold (no implied odds)
+    ok(decide({ equity: 0.20, pot: 100, call: 50, outs: 9, effStack: 10 }).action.startsWith('Fold'),
+       '−EV draw with no stack behind → Fold');
+
     // --- history street naming ---
     const sn = PNO.history.streetName;
     ok(sn(0) === 'preflop' && sn(3) === 'flop' && sn(4) === 'turn' && sn(5) === 'river',

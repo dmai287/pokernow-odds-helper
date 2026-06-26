@@ -2,10 +2,12 @@
 // listens for changes and updates the overlay live.
 const DEFAULTS = {
   enabled: true, autoDetect: true, iterations: 2000, villainRange: 100, autoRange: true,
+  onlyMyTurn: true,
 };
 
 const enabled = document.getElementById('enabled');
 const autoDetect = document.getElementById('autoDetect');
+const onlyMyTurn = document.getElementById('onlyMyTurn');
 const iterations = document.getElementById('iterations');
 const iterVal = document.getElementById('iterVal');
 const villainRange = document.getElementById('villainRange');
@@ -17,6 +19,7 @@ const rangeLabel = (v) => (Number(v) >= 100 ? 'any two' : 'top ' + v + '%');
 function render(s) {
   enabled.checked = s.enabled;
   autoDetect.checked = s.autoDetect;
+  onlyMyTurn.checked = s.onlyMyTurn;
   iterations.value = s.iterations;
   iterVal.textContent = Number(s.iterations).toLocaleString();
   villainRange.value = s.villainRange;
@@ -39,6 +42,7 @@ document.getElementById('viewHistory').addEventListener('click', () => {
 
 enabled.addEventListener('change', () => chrome.storage.local.set({ enabled: enabled.checked }));
 autoDetect.addEventListener('change', () => chrome.storage.local.set({ autoDetect: autoDetect.checked }));
+onlyMyTurn.addEventListener('change', () => chrome.storage.local.set({ onlyMyTurn: onlyMyTurn.checked }));
 iterations.addEventListener('input', () => {
   iterVal.textContent = Number(iterations.value).toLocaleString();
 });

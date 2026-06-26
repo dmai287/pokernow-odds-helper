@@ -6,6 +6,7 @@
 
   const DEFAULTS = {
     enabled: true, autoDetect: true, iterations: 2000, villainRange: 100, autoRange: true,
+    onlyMyTurn: true,
   };
   let settings = Object.assign({}, DEFAULTS);
   let overlay = null;
@@ -42,12 +43,14 @@
     const state = overlay.getInputs();
     let position = null;
     let heroStack = null;
+    let myTurn = null;
 
     let bb = null;
     if (settings.autoDetect) {
       const scraped = PNO.scraper.scrape();
       heroStack = scraped.heroStack;
       bb = scraped.bb;
+      myTurn = scraped.myTurn;
       // Mirror the live table exactly, including empties. When a hand ends and the
       // board / hole cards clear, this resets the displayed cards and odds instead of
       // leaving the previous hand's numbers on screen.
@@ -77,16 +80,36 @@
       return;
     }
 
-    overlay.setDraws(PNO.draws.analyze(state.hero, state.board));
+    const drawInfo = PNO.draws.analyze(state.hero, state.board);
+    overlay.setDraws(drawInfo);
 
-    const pct = settings.autoRange
-      ? PNO.ranges.tightnessFromAction(state.pot, state.call, state.board.length)
-      : Math.max(5, Math.min(100, settings.villainRange || 100)) / 100;
-    const villainRange = pct >= 1 ? null : PNO.ranges.topPercent(pct);
+    // Build the villain range(s). With auto-range and a multiway bet, model the raiser
+    // with a tight range and the callers with a wider one (per-villain ranges).
+    const autoTight = PNO.ranges.tightnessFromAction(state.pot, state.call, state.board.length);
+    let villainRange, rangeLabel;
+    if (settings.autoRange) {
+      const tightSet = autoTight >= 1 ? null : PNO.ranges.topPercent(autoTight);
+      if (state.call > 0 && state.opponents > 1) {
+        const callerSet = PNO.ranges.topPercent(0.50);
+        villainRange = [tightSet];
+        for (let i = 1; i < state.opponents; i++) villainRange.push(callerSet);
+        rangeLabel = `raiser top ${Math.round(autoTight * 100)}% · ${state.opponents - 1}× top 50%`;
+      } else {
+        villainRange = tightSet;
+        rangeLabel = tightSet ? `top ${Math.round(autoTight * 100)}% (auto)` : 'any two';
+      }
+    } else {
+      const p = Math.max(5, Math.min(100, settings.villainRange || 100)) / 100;
+      villainRange = p >= 1 ? null : PNO.ranges.topPercent(p);
+      rangeLabel = villainRange ? `top ${Math.round(p * 100)}%` : 'any two';
+    }
+
     const res = PNO.equity.monteCarlo(
       state.hero, state.board, state.opponents, settings.iterations, villainRange
     );
-    // Preflop, prefer position-based starting-hand advice; postflop use equity/pot odds.
+
+    // Preflop, prefer position-based starting-hand advice; postflop use equity/pot odds
+    // (with implied odds for draws and a stack-behind estimate).
     const preflopAdvice = (state.board.length === 0)
       ? PNO.preflop.advise({
           hole: state.hero,
@@ -106,12 +129,18 @@
             call: state.call,
             opponents: state.opponents,
             inPosition: position ? position.inPosition : undefined,
+            outs: drawInfo ? drawInfo.outs : 0,
+            effStack: typeof heroStack === 'number' ? Math.max(0, heroStack - state.call) : 0,
           })
         : { action: '—', tone: 'bad', reason: 'Duplicate card detected — check your inputs.' };
-    const rangeLabel = villainRange
-      ? `top ${Math.round(pct * 100)}%${settings.autoRange ? ' (auto)' : ''}`
-      : 'any two';
-    overlay.showResult(res, decision, rangeLabel);
+
+    // Advise only on your turn (when enabled and we can tell it isn't): keep the
+    // equity/draws/EV as information but hold the Fold/Call/Raise call.
+    const shownDecision = (settings.autoDetect && settings.onlyMyTurn && myTurn === false)
+      ? { action: '⏳ Not your turn', tone: 'neutral',
+          reason: 'Advice appears when it’s your action.' }
+      : decision;
+    overlay.showResult(res, shownDecision, rangeLabel);
 
     // Expected value of calling — only meaningful when there's a bet to call.
     const ev = (res && state.call > 0)

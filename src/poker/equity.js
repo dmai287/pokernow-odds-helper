@@ -46,7 +46,11 @@
     const needBoard = 5 - board.length;
     if (needBoard + opponents * 2 > baseDeck.length) return null;
 
-    const inRange = (PNO.ranges && villainRange) ? PNO.ranges.inRange : null;
+    // villainRange may be a single Set/null (applied to every opponent) or an array of
+    // Sets/nulls, one per opponent (e.g. a tight raiser + looser callers).
+    const rangesArr = Array.isArray(villainRange) ? villainRange : null;
+    const singleRange = rangesArr ? null : villainRange;
+    const inRange = PNO.ranges ? PNO.ranges.inRange : null;
     const MAX_TRIES = 40; // rejection-sampling cap before falling back to any-two-cards
 
     let equitySum = 0, win = 0, tie = 0, lose = 0;
@@ -65,8 +69,9 @@
       let oppMax = -1, oppTies = 0;
       for (let o = 0; o < opponents; o++) {
         let a, b;
-        if (inRange) {
-          // Rejection-sample a two-card hand within the villain's range. The pool is
+        const vr = rangesArr ? (rangesArr[o] || null) : singleRange;
+        if (inRange && vr) {
+          // Rejection-sample a two-card hand within this villain's range. The pool is
           // left untouched while rejecting, so ia/ib stay valid until we accept.
           let tries = 0, ok = false, ia = 0, ib = 1;
           do {
@@ -74,7 +79,7 @@
             ib = Math.floor(Math.random() * (len - 1));
             if (ib >= ia) ib++;
             a = pool[ia]; b = pool[ib];
-            ok = inRange(villainRange, a, b);
+            ok = inRange(vr, a, b);
           } while (!ok && ++tries < MAX_TRIES);
           // Remove both by swap-remove, higher index first to keep loI valid.
           const hiI = Math.max(ia, ib), loI = Math.min(ia, ib);

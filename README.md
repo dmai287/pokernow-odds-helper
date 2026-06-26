@@ -25,6 +25,14 @@ poker math — see the [disclaimer](#disclaimer).
 - **Auto range** — derives that range from the action: a big bet/raise implies a tight
   range, a small bet or a limped/checked pot a wide one (on by default). Or set the
   tightness manually with the popup slider.
+- **Per-villain ranges** — multiway, the raiser is modeled with a tight range and the
+  callers with a wider one, instead of one range for the whole field.
+- **Implied odds** — a draw that's −EV on immediate pot odds can still be a call when
+  the stack behind justifies it; the advice becomes "Call (implied)" and shows how much
+  more you need to win on later streets.
+- **Advise only on your turn** — gates the Fold/Call/Raise call to when it's actually
+  your action (PokerNow's acting-seat marker); equity/draws/EV still show as info. On by
+  default; toggle in the popup.
 - **Position** — detects your seat relative to the button (blinds / early / late /
   button) and whether you're in position (act last). The advice tightens slightly when
   you're out of position and loosens in position (an equity-realization adjustment).

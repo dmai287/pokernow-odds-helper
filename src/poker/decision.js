@@ -17,6 +17,16 @@
     return { chips: Math.round(frac * pot), note };
   }
 
+  // Implied odds: extra chips you must win on later streets to justify a call that is
+  // −EV right now. Returns that amount if it's realistically winnable (within the stack
+  // behind), else null. Only meaningful with a real draw (outs) and chips behind.
+  function impliedExtra(equity, pot, call, outs, effStack) {
+    if (!(outs > 0) || !(effStack > 0) || !(equity > 0)) return null;
+    const extra = call * (1 - equity) / equity - pot; // break-even implied winnings
+    if (extra <= 0) return 0; // immediate odds already enough
+    return extra <= effStack * IMPLIED_REALIZE ? extra : null;
+  }
+
   // Raise sizing (facing a bet): total chips to commit = call + a raise increment
   // measured against the pot after calling. Pot-sized for the strongest hands.
   function raiseSize(equity, pot, call) {
@@ -34,9 +44,11 @@
   const RAISE_MARGIN = 0.15;  // equity must clear pot odds by this much to raise
   const CLOSE_FOLD = 0.05;    // within this of pot odds = a "close" fold
   const POS_CUSHION = 0.03;   // equity realization: out of position needs a bit more
+  const IMPLIED_REALIZE = 0.5; // fraction of the stack behind you realistically win on a hit
 
-  // input: { equity, pot, call, opponents, inPosition }
+  // input: { equity, pot, call, opponents, inPosition, outs, effStack }
   //   inPosition: true (acts last), false (out of position), or undefined (unknown)
+  //   outs/effStack: draw outs and the stack behind, for implied-odds on a −EV draw
   // returns: { action, tone: 'good'|'neutral'|'bad', reason }
   function decide(input) {
     const equity = input.equity;
@@ -44,6 +56,8 @@
     const call = Number(input.call) || 0;
     const heads = (input.opponents || 1) <= 1;
     const ip = input.inPosition; // true / false / undefined
+    const outs = Number(input.outs) || 0;
+    const effStack = Number(input.effStack) || 0;
     const posTag = ip === true ? ' (in position)' : ip === false ? ' (out of position)' : '';
 
     if (equity == null) {
@@ -78,6 +92,14 @@
     const margin = equity - breakeven;
 
     if (equity < needed) {
+      // −EV right now, but a real draw with chips behind may have the implied odds.
+      const extra = impliedExtra(equity, pot, call, outs, effStack);
+      if (extra != null) {
+        return { action: 'Call (implied)', tone: 'neutral',
+          reason: extra <= 0
+            ? `Drawing (${outs} outs) — pot odds already cover it.`
+            : `−EV now, but your draw (${outs} outs) has implied odds — need to win ~${Math.round(extra)} more on later streets.` };
+      }
       if (needed - equity <= CLOSE_FOLD) {
         return { action: 'Fold (close)', tone: 'bad',
           reason: `Just short${posTag} — need ~${pct(needed)} (pot odds ${pct(breakeven)}), ` +
