@@ -10,6 +10,8 @@ poker math — see the [disclaimer](#disclaimer).
   Monte Carlo simulation, updated as the board develops.
 - **Pot odds** — enter pot size and amount to call; the panel shows the breakeven
   equity and whether a call is +EV or −EV.
+- **Expected value** — the chips a call is worth on average, `equity × (pot + call) −
+  call`, alongside the pot you stand to win. Green when +EV, red when −EV.
 - **Outs & draws** — on the flop/turn, labels your flush draws, open-enders, and
   gutshots, counts deduped outs, and estimates the chance to hit by the river.
 - **Opponent ranges** — model villains as holding a "top X%" range instead of any two

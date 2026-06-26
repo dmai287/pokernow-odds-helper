@@ -22,7 +22,7 @@
   <script>
     const { parseCard } = PNO.cards;
     const { evaluate } = PNO.evaluator;
-    const { monteCarlo, potOdds } = PNO.equity;
+    const { monteCarlo, potOdds, callEV } = PNO.equity;
     const { decide } = PNO.decision;
     const { analyze } = PNO.draws;
     const { topPercent, handKey, inRange } = PNO.ranges;
@@ -94,6 +94,11 @@
     // --- pot odds ---
     approx(potOdds(100, 50), 1/3, 0.0001, 'pot 100 call 50 → 33.3%');
     approx(potOdds(150, 50), 0.25, 0.0001, 'pot 150 call 50 → 25%');
+
+    // --- expected value of a call (chips) ---
+    approx(callEV(0.5, 100, 50), 25, 0.0001, 'EV: 50% equity, pot 100, call 50 → +25');
+    approx(callEV(1 / 3, 100, 50), 0, 0.0001, 'EV: breakeven equity → 0');
+    approx(callEV(0.2, 100, 50), -20, 0.0001, 'EV: 20% equity, pot 100, call 50 → −20');
 
     // --- decision engine ---
     // facing a bet, equity below pot odds → fold

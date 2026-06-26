@@ -141,6 +141,16 @@
 
 .pno-detail { color: #8e9bab; font-size: 10.5px; }
 
+.pno-ev {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  min-height: 13px;
+}
+.pno-ev:empty { margin-top: 0; min-height: 0; }
+.pno-ev-pos { color: #6fe79f; }
+.pno-ev-neg { color: #ff8b8b; }
+
 .pno-draws {
   margin-top: 6px;
   font-size: 11px;

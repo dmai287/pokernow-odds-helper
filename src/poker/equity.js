@@ -113,5 +113,14 @@
     return callAmount / (potSize + callAmount);
   }
 
-  PNO.equity = { monteCarlo, potOdds };
+  // Expected value (in chips) of calling `callAmount` to win a pot of `potSize`
+  // (potSize is the chips already in the middle, including the villain's bet).
+  // EV = equity * (pot + call) - call. Zero exactly at the pot-odds breakeven.
+  function callEV(equity, potSize, callAmount) {
+    potSize = Number(potSize) || 0;
+    callAmount = Number(callAmount) || 0;
+    return equity * (potSize + callAmount) - callAmount;
+  }
+
+  PNO.equity = { monteCarlo, potOdds, callEV };
 })();

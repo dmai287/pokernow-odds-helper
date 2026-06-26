@@ -107,6 +107,9 @@
     const detail = el('div', 'pno-detail', 'Win — · Tie — · Lose —');
     results.appendChild(detail);
 
+    const ev = el('div', 'pno-ev', '');
+    results.appendChild(ev);
+
     const draws = el('div', 'pno-draws', '');
     results.appendChild(draws);
 
@@ -175,6 +178,20 @@
       decisionBox.className = 'pno-decision pno-' + (d.tone || 'neutral');
     }
 
+    // Render expected value of the call. Pass a falsy value to clear.
+    function setEV(info) {
+      if (!info) {
+        ev.textContent = '';
+        ev.className = 'pno-ev';
+        return;
+      }
+      const round = (x) => Math.round(x).toLocaleString();
+      const sign = info.ev >= 0 ? '+' : '−';
+      ev.textContent =
+        `Win ${round(info.win)} chips · EV of call ${sign}${round(Math.abs(info.ev))}`;
+      ev.className = 'pno-ev ' + (info.ev >= 0 ? 'pno-ev-pos' : 'pno-ev-neg');
+    }
+
     // Render hero position. Pass a falsy value to clear.
     function setPosition(pos) {
       if (!pos || !pos.name) {
@@ -221,6 +238,7 @@
       setMeta,
       setDraws,
       setPosition,
+      setEV,
       showResult,
       onChange(fn) { changeHandler = fn; },
       setEnabled(on) { root.style.display = on ? '' : 'none'; },

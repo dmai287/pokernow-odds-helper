@@ -44,6 +44,7 @@
 
     if (state.hero.length !== 2) {
       overlay.setDraws(null);
+      overlay.setEV(null);
       overlay.showResult(null, PNO.decision.decide({ equity: null }));
       return;
     }
@@ -66,6 +67,16 @@
       : { action: '—', tone: 'bad', reason: 'Duplicate card detected — check your inputs.' };
     const rangeLabel = villainRange ? `top ${Math.round(pct * 100)}%` : 'any two';
     overlay.showResult(res, decision, rangeLabel);
+
+    // Expected value of calling — only meaningful when there's a bet to call.
+    if (res && state.call > 0) {
+      overlay.setEV({
+        ev: PNO.equity.callEV(res.equity, state.pot, state.call),
+        win: state.pot, // chips you collect if you win
+      });
+    } else {
+      overlay.setEV(null);
+    }
   }
 
   function start() {
