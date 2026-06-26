@@ -22,6 +22,8 @@
     const res = PNO.equity.monteCarlo([hero, hero2], board, 2, 3000);
     const decision = PNO.decision.decide({ equity: res.equity, pot: 100, call: 30, opponents: 2 });
     ov.showResult(res, decision);
+    window.__ov = ov; // exposed so tests can drive setCards/setMeta/showResult
+    window.PNO_REF = PNO;
     window.__rendered = { action: decision.action, equity: res.equity };
   </script>
 </body>

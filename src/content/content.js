@@ -22,11 +22,14 @@
 
     if (settings.autoDetect) {
       const scraped = PNO.scraper.scrape();
-      if (scraped.hero.length === 2) state.hero = scraped.hero;
-      if (scraped.board.length) state.board = scraped.board;
+      // Mirror the live table exactly, including empties. When a hand ends and the
+      // board / hole cards clear, this resets the displayed cards and odds instead of
+      // leaving the previous hand's numbers on screen.
+      state.hero = scraped.hero;
+      state.board = scraped.board;
       overlay.setCards(state.hero, state.board);
 
-      if (scraped.opponents > 0) state.opponents = scraped.opponents;
+      state.opponents = scraped.opponents > 0 ? scraped.opponents : state.opponents;
       if (scraped.pot != null) state.pot = scraped.pot;
       if (scraped.call != null) state.call = scraped.call;
       overlay.setMeta(
