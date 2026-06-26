@@ -6,11 +6,18 @@
 
   const DEFAULTS = {
     enabled: true, autoDetect: true, iterations: 2000, villainRange: 100, autoRange: true,
-    onlyMyTurn: true,
+    onlyMyTurn: true, coaching: true,
   };
   let settings = Object.assign({}, DEFAULTS);
   let overlay = null;
   let observer = null;
+  let coachProfile = null;
+
+  // Recompute the player's tendency profile from logged hands.
+  function refreshCoach() {
+    if (!settings.coaching || !PNO.coach || !PNO.history) { coachProfile = null; return; }
+    PNO.history.getAll((hands) => { coachProfile = PNO.coach.profile(hands); });
+  }
 
   // After the extension is reloaded, this orphaned content script keeps running but
   // every chrome.* call throws. Detect that and shut ourselves down cleanly.
@@ -44,6 +51,7 @@
     pendingHand = null;
     pendingHeroKey = null;
     handStartStack = null;
+    refreshCoach(); // learn from the hand just logged
   }
 
   function debounce(fn, ms) {
@@ -159,6 +167,18 @@
       : decision;
     overlay.showResult(res, shownDecision, rangeLabel);
 
+    // Coaching nudge from the player's own history, relevant to this spot.
+    if (settings.coaching && coachProfile && PNO.coach) {
+      overlay.setCoach(PNO.coach.note(coachProfile, {
+        street: PNO.history.streetName(state.board.length),
+        inPosition: position ? position.inPosition : undefined,
+        action: decision.action,
+        facingBet: state.call > 0,
+      }));
+    } else {
+      overlay.setCoach(null);
+    }
+
     // Expected value of calling — only meaningful when there's a bet to call.
     const ev = (res && state.call > 0)
       ? PNO.equity.callEV(res.equity, state.pot, state.call) : null;
@@ -207,19 +227,22 @@
       attributeFilter: ['class', 'data-card'],
     });
 
-    // React to live settings changes from the popup.
+    // React to live settings changes from the popup, and to history updates.
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== 'local') return;
       let touched = false;
       for (const key of Object.keys(DEFAULTS)) {
         if (changes[key]) { settings[key] = changes[key].newValue; touched = true; }
       }
+      if (changes[PNO.history.KEY]) refreshCoach(); // history cleared/updated elsewhere
       if (touched) {
         overlay.setEnabled(settings.enabled);
+        refreshCoach(); // e.g. coaching toggled on
         recompute();
       }
     });
 
+    refreshCoach();
     recompute();
   }
 

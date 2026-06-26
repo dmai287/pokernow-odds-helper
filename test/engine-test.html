@@ -21,6 +21,7 @@
   <script src="../src/poker/ranges.js"></script>
   <script src="../src/poker/preflop.js"></script>
   <script src="../src/poker/leaks.js"></script>
+  <script src="../src/poker/coach.js"></script>
   <script src="../src/content/history.js"></script>
   <script>
     const { parseCard } = PNO.cards;
@@ -250,6 +251,22 @@
     ok(lr.worstHands[0].net === -100, 'leak report: biggest loss surfaced');
     ok(lr.tips.some((t) => /out of position/.test(t)), 'leak report: OOP tip generated');
     ok(PNO.leaks.analyze([]).count === 0, 'leak report: empty input handled');
+
+    // --- coach (learns from your history) ---
+    const coachHands = [];
+    for (let i = 0; i < 12; i++) coachHands.push({ position: 'Big blind', inPosition: false, street: 'river', action: 'Call', ev: -20, net: -50 });
+    for (let i = 0; i < 4; i++) coachHands.push({ position: 'Button', inPosition: true, street: 'flop', action: 'Bet → 50', ev: null, net: 40 });
+    const cp = PNO.coach.profile(coachHands);
+    ok(cp.ready && cp.overCallsRiver && cp.leaksOOP && cp.tooPassive, 'coach: profile flags all three leaks');
+    ok(/over-call rivers/.test(PNO.coach.note(cp, { street: 'river', action: 'Call', inPosition: false }) || ''),
+       'coach: river over-call nudge');
+    ok(/out of position/.test(PNO.coach.note(cp, { street: 'flop', action: 'Call', inPosition: false }) || ''),
+       'coach: out-of-position nudge');
+    ok(/passively/.test(PNO.coach.note(cp, { street: 'flop', action: 'Check', inPosition: true }) || ''),
+       'coach: passive-play nudge');
+    ok(PNO.coach.profile([]).ready === false, 'coach: not ready with too few hands');
+    ok(PNO.coach.note(PNO.coach.profile([]), { street: 'river', action: 'Call' }) === null,
+       'coach: no note before enough hands');
 
     // --- history street naming ---
     const sn = PNO.history.streetName;

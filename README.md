@@ -48,6 +48,10 @@ poker math — see the [disclaimer](#disclaimer).
 - **Leak report** — turns the logged hands into a study report: net by position,
   in-position vs out-of-position win rate, aggression %, showdown frequency, −EV calls,
   your biggest losses, and prioritized, actionable tips on where you're spilling chips.
+- **Live coaching** — learns your tendencies from that report and, during play, surfaces
+  a nudge relevant to the current spot (e.g. "you over-call rivers — make sure this beats
+  a bluff", "you lose most out of position — lean toward folding"). It coaches *you* on
+  *your* leaks — it does not profile opponents. On by default; toggle in the popup.
 - **Draggable overlay** — a compact panel you can move and collapse.
 - **Configurable** — toggle the overlay, auto-detect, and simulation count from the
   extension popup.

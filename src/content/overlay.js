@@ -113,6 +113,10 @@
     const draws = el('div', 'pno-draws', '');
     results.appendChild(draws);
 
+    const coach = el('div', 'pno-coach', '');
+    coach.style.display = 'none';
+    results.appendChild(coach);
+
     body.appendChild(results);
 
     const note = el('div', 'pno-note', 'Study tool · cards auto-fill from the table when detected');
@@ -204,6 +208,12 @@
       position.className = 'pno-position ' + (pos.inPosition ? 'pno-ip' : 'pno-oop');
     }
 
+    // Render a coaching nudge (from your own history). Pass falsy to clear.
+    function setCoach(text) {
+      coach.textContent = text ? '🎯 ' + text : '';
+      coach.style.display = text ? 'block' : 'none';
+    }
+
     // Render draw info (flush/straight outs). Pass a falsy value to clear.
     function setDraws(info) {
       if (!info || !info.draws || !info.draws.length) {
@@ -221,6 +231,8 @@
         barFill.style.width = '0%';
         detail.textContent = 'Enter your two hole cards to calculate';
         draws.textContent = '';
+        coach.textContent = '';
+        coach.style.display = 'none';
         return;
       }
       const pct = (res.equity * 100);
@@ -238,6 +250,7 @@
       setCards,
       setMeta,
       setDraws,
+      setCoach,
       setPosition,
       setEV,
       showResult,

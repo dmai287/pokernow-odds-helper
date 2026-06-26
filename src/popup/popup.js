@@ -2,12 +2,13 @@
 // listens for changes and updates the overlay live.
 const DEFAULTS = {
   enabled: true, autoDetect: true, iterations: 2000, villainRange: 100, autoRange: true,
-  onlyMyTurn: true,
+  onlyMyTurn: true, coaching: true,
 };
 
 const enabled = document.getElementById('enabled');
 const autoDetect = document.getElementById('autoDetect');
 const onlyMyTurn = document.getElementById('onlyMyTurn');
+const coaching = document.getElementById('coaching');
 const iterations = document.getElementById('iterations');
 const iterVal = document.getElementById('iterVal');
 const villainRange = document.getElementById('villainRange');
@@ -20,6 +21,7 @@ function render(s) {
   enabled.checked = s.enabled;
   autoDetect.checked = s.autoDetect;
   onlyMyTurn.checked = s.onlyMyTurn;
+  coaching.checked = s.coaching;
   iterations.value = s.iterations;
   iterVal.textContent = Number(s.iterations).toLocaleString();
   villainRange.value = s.villainRange;
@@ -43,6 +45,7 @@ document.getElementById('viewHistory').addEventListener('click', () => {
 enabled.addEventListener('change', () => chrome.storage.local.set({ enabled: enabled.checked }));
 autoDetect.addEventListener('change', () => chrome.storage.local.set({ autoDetect: autoDetect.checked }));
 onlyMyTurn.addEventListener('change', () => chrome.storage.local.set({ onlyMyTurn: onlyMyTurn.checked }));
+coaching.addEventListener('change', () => chrome.storage.local.set({ coaching: coaching.checked }));
 iterations.addEventListener('input', () => {
   iterVal.textContent = Number(iterations.value).toLocaleString();
 });
