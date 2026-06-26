@@ -25,6 +25,7 @@
     bet: '.table-player-bet-value',        // a player's current-street bet
     dealer: '[class*="dealer-position-"]', // button; class encodes seat (dealer-position-N)
     blinds: '.blind-value',                // e.g. "NLH~ 10 / 20" → big blind 20
+    heroStack: '.table-player-stack',      // hero's chip count (verified on live table)
   };
 
   // Big blind amount, parsed from the blinds display (largest of the listed values).
@@ -185,7 +186,7 @@
   function readHeroStack() {
     const hero = document.querySelector(SELECTORS.heroContainer);
     if (!hero) return null;
-    const el = hero.querySelector('[class*="stack"]');
+    const el = hero.querySelector(SELECTORS.heroStack) || hero.querySelector('[class*="stack"]');
     if (!el) return null;
     const n = nums(el.textContent);
     return n.length ? n[n.length - 1] : null;
