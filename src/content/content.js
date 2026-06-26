@@ -201,24 +201,32 @@
       // New hand dealt (different hole cards): commit the previous one. The current
       // stack already reflects that hand's result, so it serves as the end stack.
       if (pendingHand && pendingHeroKey !== heroKey) commitHand(heroStack);
-      if (pendingHand === null) handStartStack = heroStack; // first tick of a new hand
-      pendingHeroKey = heroKey;
-      pendingHand = {
-        t: Date.now(),
-        hero: state.hero.map(PNO.cards.cardToStr),
-        board: state.board.map(PNO.cards.cardToStr),
-        street: PNO.history.streetName(state.board.length),
-        position: position ? position.name : null,
-        inPosition: position ? position.inPosition : null,
-        opponents: state.opponents,
-        pot: state.pot,
-        call: state.call,
-        equity: res ? res.equity : null,
-        action: decision.action + (decision.size && decision.size.chips > 0 ? ` → ${decision.size.chips}` : ''),
-        ev,
-        range: rangeLabel,
-        endStack: heroStack,
-      };
+      const sameHand = pendingHand && pendingHeroKey === heroKey;
+
+      // The pot only grows within a hand. Once the hand resolves, the table resets the
+      // pot (and call) to 0 while the hole cards are still shown — don't let that empty
+      // state overwrite the last live snapshot (this was logging pot/call as 0).
+      const resetting = sameHand && state.pot < (pendingHand.pot || 0);
+      if (!resetting) {
+        if (pendingHand === null) handStartStack = heroStack; // first tick of a new hand
+        pendingHeroKey = heroKey;
+        pendingHand = {
+          t: Date.now(),
+          hero: state.hero.map(PNO.cards.cardToStr),
+          board: state.board.map(PNO.cards.cardToStr),
+          street: PNO.history.streetName(state.board.length),
+          position: position ? position.name : null,
+          inPosition: position ? position.inPosition : null,
+          opponents: state.opponents,
+          pot: state.pot,
+          call: state.call,
+          equity: res ? res.equity : null,
+          action: decision.action + (decision.size && decision.size.chips > 0 ? ` → ${decision.size.chips}` : ''),
+          ev,
+          range: rangeLabel,
+          endStack: heroStack,
+        };
+      }
     }
   }
 
