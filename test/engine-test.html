@@ -19,6 +19,7 @@
   <script src="../src/poker/decision.js"></script>
   <script src="../src/poker/draws.js"></script>
   <script src="../src/poker/ranges.js"></script>
+  <script src="../src/content/history.js"></script>
   <script>
     const { parseCard } = PNO.cards;
     const { evaluate } = PNO.evaluator;
@@ -192,6 +193,11 @@
     // bigger bets imply tighter ranges (monotonic)
     ok(tightnessFromAction(300, 200, 3) < tightnessFromAction(130, 30, 3),
        'bigger bet ⇒ tighter range');
+
+    // --- history street naming ---
+    const sn = PNO.history.streetName;
+    ok(sn(0) === 'preflop' && sn(3) === 'flop' && sn(4) === 'turn' && sn(5) === 'river',
+       'streetName maps board length to street');
 
     const summary = document.createElement('h2');
     summary.innerHTML = `<br>${passed} passed, ${failed} failed`;

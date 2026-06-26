@@ -10,6 +10,11 @@
   let settings = Object.assign({}, DEFAULTS);
   let overlay = null;
 
+  // Hand-history tracking: pendingHand holds the latest snapshot of the hand in
+  // progress; it is committed to history when the hand ends (hole cards clear).
+  let pendingHand = null;
+  let handStartStack = null;
+
   function debounce(fn, ms) {
     let t = null;
     return function () {
@@ -22,9 +27,11 @@
     if (!overlay) return;
     const state = overlay.getInputs();
     let position = null;
+    let heroStack = null;
 
     if (settings.autoDetect) {
       const scraped = PNO.scraper.scrape();
+      heroStack = scraped.heroStack;
       // Mirror the live table exactly, including empties. When a hand ends and the
       // board / hole cards clear, this resets the displayed cards and odds instead of
       // leaving the previous hand's numbers on screen.
@@ -45,6 +52,16 @@
     overlay.setPosition(position);
 
     if (state.hero.length !== 2) {
+      // Hand over: commit the last snapshot to history.
+      if (settings.autoDetect && pendingHand) {
+        pendingHand.endStack = heroStack;
+        pendingHand.net = (typeof handStartStack === 'number' && typeof heroStack === 'number')
+          ? heroStack - handStartStack : null;
+        PNO.history.add(pendingHand);
+      }
+      pendingHand = null;
+      handStartStack = null;
+
       overlay.setDraws(null);
       overlay.setEV(null);
       overlay.showResult(null, PNO.decision.decide({ equity: null }));
@@ -75,13 +92,29 @@
     overlay.showResult(res, decision, rangeLabel);
 
     // Expected value of calling — only meaningful when there's a bet to call.
-    if (res && state.call > 0) {
-      overlay.setEV({
-        ev: PNO.equity.callEV(res.equity, state.pot, state.call),
-        win: state.pot, // chips you collect if you win
-      });
-    } else {
-      overlay.setEV(null);
+    const ev = (res && state.call > 0)
+      ? PNO.equity.callEV(res.equity, state.pot, state.call) : null;
+    if (ev != null) overlay.setEV({ ev, win: state.pot });
+    else overlay.setEV(null);
+
+    // Update the hand-in-progress snapshot (committed to history when the hand ends).
+    if (settings.autoDetect) {
+      if (pendingHand === null) handStartStack = heroStack; // first tick of a new hand
+      pendingHand = {
+        t: Date.now(),
+        hero: state.hero.map(PNO.cards.cardToStr),
+        board: state.board.map(PNO.cards.cardToStr),
+        street: PNO.history.streetName(state.board.length),
+        position: position ? position.name : null,
+        inPosition: position ? position.inPosition : null,
+        opponents: state.opponents,
+        pot: state.pot,
+        call: state.call,
+        equity: res ? res.equity : null,
+        action: decision.action + (decision.size && decision.size.chips > 0 ? ` → ${decision.size.chips}` : ''),
+        ev,
+        range: rangeLabel,
+      };
     }
   }
 

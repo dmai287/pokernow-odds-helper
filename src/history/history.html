@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="history.css">
+  <title>Hand History — PokerNow Odds Helper</title>
+</head>
+<body>
+  <header class="head">
+    <h1>♠ Hand History</h1>
+    <div class="actions">
+      <button id="export" class="btn">Export CSV</button>
+      <button id="clear" class="btn btn-danger">Clear</button>
+    </div>
+  </header>
+
+  <section class="summary" id="summary"></section>
+
+  <div class="table-wrap">
+    <table id="table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Time</th>
+          <th>Hand</th>
+          <th>Board</th>
+          <th>Street</th>
+          <th>Position</th>
+          <th>Opp</th>
+          <th>Pot</th>
+          <th>Call</th>
+          <th>Equity</th>
+          <th>Suggested</th>
+          <th>EV</th>
+          <th>Net</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p id="empty" class="empty" hidden>No hands logged yet. Play some hands with auto-detect on, then come back.</p>
+  </div>
+
+  <script src="history.js"></script>
+</body>
+</html>

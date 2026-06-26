@@ -27,6 +27,16 @@ function render(s) {
 
 chrome.storage.local.get(DEFAULTS, render);
 
+// Hand-history button: show the count and open the full log in a new tab.
+const histCount = document.getElementById('histCount');
+chrome.storage.local.get({ handHistory: [] }, (d) => {
+  const n = (d.handHistory || []).length;
+  histCount.textContent = n ? `(${n})` : '';
+});
+document.getElementById('viewHistory').addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('src/history/history.html') });
+});
+
 enabled.addEventListener('change', () => chrome.storage.local.set({ enabled: enabled.checked }));
 autoDetect.addEventListener('change', () => chrome.storage.local.set({ autoDetect: autoDetect.checked }));
 iterations.addEventListener('input', () => {

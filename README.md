@@ -27,6 +27,10 @@ poker math — see the [disclaimer](#disclaimer).
   you're out of position and loosens in position (an equity-realization adjustment).
 - **Auto-detect** — reads your hole cards and the board from the table when possible,
   with manual entry as a fallback (type cards like `As`, `Td`, `9c`).
+- **Hand history** — logs each completed hand (cards, board, street, position,
+  opponents, pot/call, equity, the suggested action, EV, and a best-effort net result)
+  to local storage. Review them in a sortable table, export to CSV, or clear — opened
+  from the popup. Great for post-session study.
 - **Draggable overlay** — a compact panel you can move and collapse.
 - **Configurable** — toggle the overlay, auto-detect, and simulation count from the
   extension popup.

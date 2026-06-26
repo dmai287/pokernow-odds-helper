@@ -39,6 +39,21 @@ h1 { font-size: 15px; }
 input[type="range"] { width: 100%; accent-color: #6fe79f; }
 input[type="checkbox"] { width: 16px; height: 16px; accent-color: #6fe79f; }
 
+.history-btn {
+  width: 100%;
+  margin-top: 12px;
+  background: #1d2730;
+  color: #e8edf2;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 9px 11px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+.history-btn:hover { background: #28333d; }
+.history-btn span { color: #6fe79f; }
+
 .hint {
   margin-top: 12px;
   font-size: 11px;

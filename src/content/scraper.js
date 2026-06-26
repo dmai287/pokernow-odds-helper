@@ -170,6 +170,18 @@
     return { call: Math.max(0, maxBet - heroBet), opponents };
   }
 
+  // Best-effort hero stack (chip count) for win/loss tracking. PokerNow's stack markup
+  // varies, so this scans the hero seat for a "stack" element and takes its number.
+  // Returns a number or null. May need tuning against the live page.
+  function readHeroStack() {
+    const hero = document.querySelector(SELECTORS.heroContainer);
+    if (!hero) return null;
+    const el = hero.querySelector('[class*="stack"]');
+    if (!el) return null;
+    const n = nums(el.textContent);
+    return n.length ? n[n.length - 1] : null;
+  }
+
   function scrape() {
     const seats = readSeats();
     return {
@@ -179,6 +191,7 @@
       call: seats.call,
       opponents: seats.opponents,
       position: readPosition(),
+      heroStack: readHeroStack(),
     };
   }
 
