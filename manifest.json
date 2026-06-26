@@ -6,7 +6,9 @@
   "permissions": ["storage"],
   "host_permissions": [
     "https://www.pokernow.club/*",
-    "https://pokernow.club/*"
+    "https://pokernow.club/*",
+    "https://www.pokernow.com/*",
+    "https://pokernow.com/*"
   ],
   "action": {
     "default_popup": "src/popup/popup.html",
@@ -26,7 +28,9 @@
     {
       "matches": [
         "https://www.pokernow.club/games/*",
-        "https://pokernow.club/games/*"
+        "https://pokernow.club/games/*",
+        "https://www.pokernow.com/games/*",
+        "https://pokernow.com/games/*"
       ],
       "js": [
         "src/poker/cards.js",

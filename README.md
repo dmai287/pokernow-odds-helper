@@ -52,11 +52,15 @@ src/
 - **Pot odds** — breakeven equity = `call / (pot + call)`. Calling is +EV when your
   equity exceeds the breakeven.
 
-## Tuning card detection
+## Card detection
 
-PokerNow's HTML changes over time. If auto-detect misses, adjust the `SELECTORS`
-object at the top of [`src/content/scraper.js`](src/content/scraper.js) to match the
-current markup. Manual card entry always works regardless.
+The scraper reads PokerNow's `.card-container` elements, decoding the card from its
+CSS classes (`card-<suit>` + `card-s-<rank>`) with the value/suit spans as a fallback.
+Verified live against a real table (both `pokernow.club` and `pokernow.com`).
+
+If PokerNow's markup changes and auto-detect misses, adjust the `SELECTORS` object at
+the top of [`src/content/scraper.js`](src/content/scraper.js). Manual card entry always
+works regardless.
 
 ## Disclaimer
 
