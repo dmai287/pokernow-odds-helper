@@ -103,6 +103,9 @@
     const detail = el('div', 'pno-detail', 'Win — · Tie — · Lose —');
     results.appendChild(detail);
 
+    const draws = el('div', 'pno-draws', '');
+    results.appendChild(draws);
+
     body.appendChild(results);
 
     const note = el('div', 'pno-note', 'Study tool · cards auto-fill from the table when detected');
@@ -168,12 +171,23 @@
       decisionBox.className = 'pno-decision pno-' + (d.tone || 'neutral');
     }
 
+    // Render draw info (flush/straight outs). Pass a falsy value to clear.
+    function setDraws(info) {
+      if (!info || !info.draws || !info.draws.length) {
+        draws.textContent = '';
+        return;
+      }
+      const labels = info.draws.map((d) => `${d.name} (${d.outs})`).join(' + ');
+      draws.textContent = `${labels} · ${info.outs} outs · ${info.note}`;
+    }
+
     function showResult(res, decision) {
       setDecision(decision);
       if (!res) {
         equityVal.textContent = '—';
         barFill.style.width = '0%';
         detail.textContent = 'Enter your two hole cards to calculate';
+        draws.textContent = '';
         return;
       }
       const pct = (res.equity * 100);
@@ -189,6 +203,7 @@
       getInputs,
       setCards,
       setMeta,
+      setDraws,
       showResult,
       onChange(fn) { changeHandler = fn; },
       setEnabled(on) { root.style.display = on ? '' : 'none'; },

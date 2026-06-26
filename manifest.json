@@ -37,6 +37,7 @@
         "src/poker/evaluator.js",
         "src/poker/equity.js",
         "src/poker/decision.js",
+        "src/poker/draws.js",
         "src/content/scraper.js",
         "src/content/overlay.js",
         "src/content/content.js"

@@ -40,9 +40,12 @@
     }
 
     if (state.hero.length !== 2) {
+      overlay.setDraws(null);
       overlay.showResult(null, PNO.decision.decide({ equity: null }));
       return;
     }
+
+    overlay.setDraws(PNO.draws.analyze(state.hero, state.board));
 
     const res = PNO.equity.monteCarlo(state.hero, state.board, state.opponents, settings.iterations);
     const decision = res

@@ -17,11 +17,13 @@
   <script src="../src/poker/evaluator.js"></script>
   <script src="../src/poker/equity.js"></script>
   <script src="../src/poker/decision.js"></script>
+  <script src="../src/poker/draws.js"></script>
   <script>
     const { parseCard } = PNO.cards;
     const { evaluate } = PNO.evaluator;
     const { monteCarlo, potOdds } = PNO.equity;
     const { decide } = PNO.decision;
+    const { analyze } = PNO.draws;
     const out = document.getElementById('out');
     let passed = 0, failed = 0;
 
@@ -112,6 +114,23 @@
        'weak equity, no bet → Check');
     // no cards → neutral placeholder
     ok(decide({ equity: null }).tone === 'neutral', 'no cards → neutral');
+
+    // --- draw / outs detection ---
+    const fd = analyze(C('As Ks'), C('Qs 7s 2h'));
+    ok(fd.draws.some(d => d.name === 'Flush draw' && d.outs === 9) && fd.outs === 9,
+       'flush draw = 9 outs');
+    const oesd = analyze(C('9h 8c'), C('7d 6s 2h'));
+    ok(oesd.draws.some(d => d.name === 'Open-ended straight draw' && d.outs === 8) && oesd.outs === 8,
+       'OESD = 8 outs');
+    const gut = analyze(C('9h 8c'), C('6s 5d 2h'));
+    ok(gut.draws.some(d => d.name === 'Gutshot' && d.outs === 4) && gut.outs === 4,
+       'gutshot = 4 outs');
+    const combo = analyze(C('9s 8s'), C('7s 6s 2c'));
+    ok(combo.draws.length === 2 && combo.outs === 15,
+       'flush + OESD combo = 15 outs (deduped)');
+    ok(analyze(C('As Kd'), C('2c 7h Js')).outs === 0, 'no draw = 0 outs');
+    ok(analyze(C('9s 8s'), C('7s 6s 2c 3h Kd')).draws.length === 0, 'no draws on the river');
+    ok(analyze(C('As Ks'), C('Qs Js Ts')).draws.length === 0, 'made straight = no draw');
 
     const summary = document.createElement('h2');
     summary.innerHTML = `<br>${passed} passed, ${failed} failed`;

@@ -10,6 +10,8 @@ poker math — see the [disclaimer](#disclaimer).
   Monte Carlo simulation, updated as the board develops.
 - **Pot odds** — enter pot size and amount to call; the panel shows the breakeven
   equity and whether a call is +EV or −EV.
+- **Outs & draws** — on the flop/turn, labels your flush draws, open-enders, and
+  gutshots, counts deduped outs, and estimates the chance to hit by the river.
 - **Auto-detect** — reads your hole cards and the board from the table when possible,
   with manual entry as a fallback (type cards like `As`, `Td`, `9c`).
 - **Draggable overlay** — a compact panel you can move and collapse.
