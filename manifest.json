@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "PokerNow Odds Helper",
+  "version": "0.1.0",
+  "description": "Pot odds and Monte Carlo equity helper for PokerNow. A study/review tool for poker math.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://www.pokernow.club/*",
+    "https://pokernow.club/*"
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "PokerNow Odds Helper",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.pokernow.club/games/*",
+        "https://pokernow.club/games/*"
+      ],
+      "js": [
+        "src/poker/cards.js",
+        "src/poker/evaluator.js",
+        "src/poker/equity.js",
+        "src/content/scraper.js",
+        "src/content/overlay.js",
+        "src/content/content.js"
+      ],
+      "css": ["src/content/overlay.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

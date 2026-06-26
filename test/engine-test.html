@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Engine tests</title>
+  <style>
+    body { font: 13px monospace; background:#12161c; color:#e8edf2; padding:16px; }
+    .pass { color:#6fe79f; } .fail { color:#ff8b8b; font-weight:bold; }
+    h2 { color:#9aa7b4; }
+  </style>
+</head>
+<body>
+  <h2>PokerNow Odds Helper — engine tests</h2>
+  <div id="out"></div>
+  <!-- engine modules attach to window.PNO -->
+  <script src="../src/poker/cards.js"></script>
+  <script src="../src/poker/evaluator.js"></script>
+  <script src="../src/poker/equity.js"></script>
+  <script>
+    const { parseCard } = PNO.cards;
+    const { evaluate } = PNO.evaluator;
+    const { monteCarlo, potOdds } = PNO.equity;
+    const out = document.getElementById('out');
+    let passed = 0, failed = 0;
+
+    const C = (s) => s.split(' ').map(parseCard);
+
+    function ok(cond, label) {
+      const div = document.createElement('div');
+      div.className = cond ? 'pass' : 'fail';
+      div.textContent = (cond ? '✓ ' : '✗ FAIL ') + label;
+      out.appendChild(div);
+      cond ? passed++ : failed++;
+    }
+    function approx(actual, expected, tol, label) {
+      ok(Math.abs(actual - expected) <= tol, `${label} (got ${actual.toFixed(3)}, expect ~${expected})`);
+    }
+
+    // --- parsing ---
+    ok(parseCard('As').rank === 14 && parseCard('As').suit === 0, 'parse As');
+    ok(parseCard('10h').rank === 10 && parseCard('10h').suit === 1, 'parse 10h');
+    ok(parseCard('T♦').rank === 10 && parseCard('T♦').suit === 2, 'parse T♦');
+    ok(parseCard('zz') === null, 'reject garbage');
+
+    // --- hand ranking order ---
+    const royal      = evaluate(C('As Ks Qs Js Ts 2h 3d'));
+    const quads      = evaluate(C('9c 9d 9h 9s Ks 2h 3d'));
+    const fullHouse  = evaluate(C('9c 9d 9h Ks Kd 2h 3s'));
+    const flush      = evaluate(C('As Js 9s 6s 3s 2h Kd'));
+    const straight   = evaluate(C('5c 6d 7h 8s 9c 2h Kd'));
+    const trips      = evaluate(C('9c 9d 9h Ks Qd 2h 3s'));
+    const twoPair    = evaluate(C('9c 9d Ks Kd 2h 3s 4c'));
+    const onePair    = evaluate(C('9c 9d Ks Qd 2h 3s 4c'));
+    const highCard   = evaluate(C('9c 7d Ks Qd 2h 3s 5c'));
+    ok(royal > quads, 'straight flush > quads');
+    ok(quads > fullHouse, 'quads > full house');
+    ok(fullHouse > flush, 'full house > flush');
+    ok(flush > straight, 'flush > straight');
+    ok(straight > trips, 'straight > trips');
+    ok(trips > twoPair, 'trips > two pair');
+    ok(twoPair > onePair, 'two pair > one pair');
+    ok(onePair > highCard, 'one pair > high card');
+
+    // --- wheel straight (A-2-3-4-5) ---
+    const wheel = evaluate(C('Ah 2d 3c 4s 5h Kd Qc'));
+    ok(wheel > onePair && wheel < flush, 'wheel counts as a straight');
+    // 6-high straight beats the wheel
+    ok(evaluate(C('2h 3d 4c 5s 6h Kd Qc')) > wheel, '6-high straight > wheel');
+
+    // --- kickers ---
+    ok(evaluate(C('As Ad Ks 7d 5c 2h 3s')) > evaluate(C('As Ad Qs 7d 5c 2h 3s')),
+       'AA with K kicker > AA with Q kicker');
+
+    // --- known equities (Monte Carlo, generous tolerance) ---
+    // AA vs 1 random hand preflop ≈ 0.85
+    const aa = monteCarlo(C('As Ah'), [], 1, 8000);
+    approx(aa.equity, 0.85, 0.03, 'AA vs 1 random preflop');
+    // 72o vs 1 random hand preflop ≈ 0.35
+    const seven2 = monteCarlo(C('7c 2d'), [], 1, 8000);
+    approx(seven2.equity, 0.35, 0.04, '72o vs 1 random preflop');
+    // AKs vs 1 random preflop ≈ 0.67
+    const aks = monteCarlo(C('As Ks'), [], 1, 8000);
+    approx(aks.equity, 0.67, 0.04, 'AKs vs 1 random preflop');
+    // Made nut flush on the river = ~1.0 vs 1 opponent who can't beat it
+    const madeFlush = monteCarlo(C('As Ks'), C('Qs Js Ts 2h 3d'), 1, 3000);
+    approx(madeFlush.equity, 1.0, 0.001, 'royal flush on river = 100%');
+
+    // --- pot odds ---
+    approx(potOdds(100, 50), 1/3, 0.0001, 'pot 100 call 50 → 33.3%');
+    approx(potOdds(150, 50), 0.25, 0.0001, 'pot 150 call 50 → 25%');
+
+    const summary = document.createElement('h2');
+    summary.innerHTML = `<br>${passed} passed, ${failed} failed`;
+    summary.style.color = failed ? '#ff8b8b' : '#6fe79f';
+    out.appendChild(summary);
+    document.title = failed ? `FAIL (${failed})` : `PASS (${passed})`;
+    window.__results = { passed, failed };
+  </script>
+</body>
+</html>

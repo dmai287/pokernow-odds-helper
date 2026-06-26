@@ -1,0 +1,113 @@
+/* overlay.css — styles for the on-table odds panel. Namespaced with .pno- to avoid
+   clashing with PokerNow's own styles. */
+.pno-panel {
+  position: fixed;
+  top: 80px;
+  right: 16px;
+  z-index: 2147483647;
+  width: 230px;
+  background: rgba(18, 22, 28, 0.96);
+  color: #e8edf2;
+  font: 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  user-select: none;
+}
+
+.pno-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  cursor: move;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pno-title { font-weight: 600; letter-spacing: 0.2px; }
+
+.pno-collapse {
+  background: transparent;
+  border: none;
+  color: #9aa7b4;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.pno-collapse:hover { color: #fff; }
+
+.pno-body { padding: 10px; }
+.pno-collapsed .pno-body { display: none; }
+
+.pno-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.pno-label { color: #9aa7b4; font-size: 11px; }
+
+.pno-cards { display: flex; gap: 4px; }
+
+.pno-card {
+  width: 34px;
+  text-align: center;
+  background: #0e1218;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  color: #fff;
+  padding: 4px 0;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.pno-card:focus { outline: none; border-color: #4da3ff; }
+
+.pno-num {
+  width: 56px;
+  background: #0e1218;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  color: #fff;
+  padding: 4px 6px;
+  text-align: right;
+}
+.pno-num:focus { outline: none; border-color: #4da3ff; }
+
+.pno-results {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pno-equity { display: flex; align-items: baseline; justify-content: space-between; }
+.pno-equity-label { color: #9aa7b4; font-size: 11px; }
+.pno-equity-val { font-size: 20px; font-weight: 700; color: #6fe79f; }
+
+.pno-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 6px 0;
+}
+.pno-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #2f8f5b, #6fe79f);
+  transition: width 0.2s ease;
+}
+
+.pno-detail { color: #8e9bab; font-size: 10.5px; }
+
+.pno-advice { margin-top: 6px; font-size: 11px; font-weight: 600; min-height: 14px; }
+.pno-good { color: #6fe79f; }
+.pno-bad { color: #ff8b8b; }
+
+.pno-note {
+  margin-top: 8px;
+  color: #6b7785;
+  font-size: 9.5px;
+  font-style: italic;
+}

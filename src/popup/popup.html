@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="popup.css">
+  <title>PokerNow Odds Helper</title>
+</head>
+<body>
+  <header class="head">
+    <span class="logo">♠</span>
+    <div>
+      <h1>Odds Helper</h1>
+      <p class="sub">Study &amp; review tool</p>
+    </div>
+  </header>
+
+  <section class="settings">
+    <label class="toggle">
+      <span>Show overlay</span>
+      <input type="checkbox" id="enabled">
+    </label>
+
+    <label class="toggle">
+      <span>Auto-detect cards</span>
+      <input type="checkbox" id="autoDetect">
+    </label>
+
+    <label class="field">
+      <span>Simulations <small id="iterVal"></small></span>
+      <input type="range" id="iterations" min="500" max="10000" step="500">
+    </label>
+  </section>
+
+  <p class="hint">
+    Open a table at <strong>pokernow.club/games/…</strong> and a draggable panel appears.
+    Cards auto-fill when detected; otherwise type them (e.g. <code>As</code>, <code>Td</code>).
+  </p>
+
+  <p class="disclaimer">
+    For studying poker math and reviewing your own play. Real-time strategic
+    assistance may violate a site's terms — use responsibly.
+  </p>
+
+  <script src="popup.js"></script>
+</body>
+</html>
