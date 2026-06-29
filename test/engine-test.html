@@ -170,6 +170,17 @@
     ok(!/semi-bluff/.test(decide({ equity: 0.30, pot: 100, call: 0, outs: 4 }).action),
        'gutshot (4 outs) → not a semi-bluff');
 
+    // --- stack depth / SPR ---
+    ok(decide({ equity: 0.80, pot: 200, call: 0, effStack: 80 }).size.chips === 80,
+       'stack: value bet clamped to an 80-chip stack (all-in)');
+    const stkLow = decide({ equity: 0.80, pot: 300, call: 60, effStack: 200 });
+    ok(stkLow.size.chips === 260 && /low SPR/.test(stkLow.size.note),
+       'stack: low SPR → raise all-in (260)');
+    ok(decide({ equity: 0.80, pot: 300, call: 60, effStack: 3000 }).size.chips === 420,
+       'stack: deep stack keeps the normal 420 raise');
+    ok(decide({ equity: 0.80, pot: 300, call: 60 }).size.chips === 420,
+       'stack: unknown stack → unchanged sizing');
+
     // --- draw / outs detection ---
     const fd = analyze(C('As Ks'), C('Qs 7s 2h'));
     ok(fd.draws.some(d => d.name === 'Flush draw' && d.outs === 9) && fd.outs === 9,
@@ -335,6 +346,16 @@
     const epAct = adv({ hole: mid, position: 'Early/Middle', call: 0 }).action;
     const btnAct = adv({ hole: mid, position: 'Button', call: 0 }).action;
     ok(!(epAct === 'Raise' && btnAct !== 'Raise'), 'Button opens at least as wide as early');
+
+    // short-stacked → push/fold; deep-stacked → standard open
+    ok(adv({ hole: C('As Ks'), position: 'Button', call: 0, bb: 20, effStack: 300 }).action === 'Shove',
+       'preflop short stack: open-jam a strong hand');
+    ok(adv({ hole: C('As Ah'), position: 'Button', call: 60, bb: 20, effStack: 300 }).action === 'Shove',
+       'preflop short stack: jam a premium over a raise');
+    ok(adv({ hole: C('7c 2d'), position: 'Button', call: 60, bb: 20, effStack: 300 }).action === 'Fold',
+       'preflop short stack: fold trash over a raise');
+    ok(adv({ hole: C('As Ks'), position: 'Button', call: 0, bb: 20, effStack: 2000 }).action === 'Raise',
+       'preflop deep stack: standard open, not a jam');
 
     const summary = document.createElement('h2');
     summary.innerHTML = `<br>${passed} passed, ${failed} failed`;
