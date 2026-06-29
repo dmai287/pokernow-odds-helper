@@ -187,12 +187,32 @@
       fill(call, callVal);
     }
 
+    // Classify the action for an icon + colour, from the action string itself.
+    function actionType(action) {
+      const a = action || '';
+      if (/^Fold/.test(a)) return { type: 'fold', icon: '✋' };
+      if (/^(Check|Call)/.test(a)) return { type: 'call', icon: '✓' };
+      if (/^(Bet|Raise)/.test(a)) return { type: 'raise', icon: '⬆' };
+      return { type: 'idle', icon: '' };
+    }
+
     function setDecision(decision) {
       const d = decision || { action: '—', tone: 'neutral', reason: '' };
-      const sized = d.size && d.size.chips > 0 ? ` → ${d.size.chips.toLocaleString()}` : '';
-      decisionAction.textContent = d.action + sized;
+      const at = actionType(d.action);
+
+      // Rebuild the headline: icon · action · sizing badge (DOM nodes, no escaping needed).
+      decisionAction.textContent = '';
+      if (at.icon) {
+        const ic = el('span', 'pno-decision-icon', at.icon);
+        decisionAction.appendChild(ic);
+      }
+      decisionAction.appendChild(document.createTextNode(d.action || '—'));
+      if (d.size && d.size.chips > 0) {
+        decisionAction.appendChild(el('span', 'pno-decision-size', d.size.chips.toLocaleString()));
+      }
+
       decisionReason.textContent = d.reason;
-      decisionBox.className = 'pno-decision pno-' + (d.tone || 'neutral');
+      decisionBox.className = 'pno-decision pno-' + (d.tone || 'neutral') + ' pno-act-' + at.type;
     }
 
     // Render expected value of the call. Pass a falsy value to clear.
@@ -264,10 +284,17 @@
         return;
       }
       const head = `<span class="pno-enemy-label">Enemy profile</span>`;
-      const stats = profile.stats ? `<div class="pno-enemy-stats">VPIP ${profile.stats.vpip}% · PFR ${profile.stats.pfr}% · 3bet ${profile.stats.threeBet}% · AF ${profile.stats.af}</div>` : '';
-      const body = profile.notes.slice(0, 3).map((note) => `<div class="pno-enemy-note">${note}</div>`).join('');
-      const summary = profile.strategy ? `<div class="pno-enemy-strategy"><span class="pno-enemy-strategy-label">Simple plan:</span> ${profile.strategy}</div>` : '';
-      enemy.innerHTML = `${head}<div class="pno-enemy-style">${profile.style.replace(/-/g, ' ')} · ${profile.tightnessPct}% tight · ${profile.aggressionPct}% aggressive</div>${stats}${body}${summary}`;
+      const history = profile.history || {};
+      const historyStats = history.stats || profile.stats ? `<div class="pno-enemy-stats">History · VPIP ${((history.stats || profile.stats || {}).vpip ?? '—')}% · PFR ${((history.stats || profile.stats || {}).pfr ?? '—')}% · 3bet ${((history.stats || profile.stats || {}).threeBet ?? '—')}% · CBET ${((history.stats || profile.stats || {}).cBet ?? '—')}% · AF ${((history.stats || profile.stats || {}).af ?? '—')}</div>` : '';
+      const categoryLabel = profile.category ? `<div class="pno-enemy-category">Danh mục: ${profile.category.label}</div>` : '';
+      const categoryNote = profile.category ? `<div class="pno-enemy-note">${profile.category.note}</div>` : '';
+      const historyBody = (history.notes || profile.notes || []).slice(0, 2).map((note) => `<div class="pno-enemy-note">${note}</div>`).join('');
+      const historySummary = Array.isArray(history.strategy || profile.strategy)
+        ? (history.strategy || profile.strategy).map((line) => `<div class="pno-enemy-strategy-line">${line}</div>`).join('')
+        : ((history.strategy || profile.strategy) ? `<div class="pno-enemy-strategy-line">${history.strategy || profile.strategy}</div>` : '');
+      const live = profile.live || {};
+      const liveBody = (live.notes || []).map((note) => `<div class="pno-enemy-note">${note}</div>`).join('');
+      enemy.innerHTML = `${head}<div class="pno-enemy-section"><div class="pno-enemy-section-label">Enemy profile</div>${historyStats}${categoryLabel}${categoryNote}<div class="pno-enemy-style">${(history.style || profile.style || 'mixed').replace(/-/g, ' ')} · ${(history.tightnessPct ?? profile.tightnessPct ?? 0)}% tight · ${(history.aggressionPct ?? profile.aggressionPct ?? 0)}% aggressive</div>${historyBody}<div class="pno-enemy-strategy"><span class="pno-enemy-strategy-label">Cách chơi:</span>${historySummary}</div></div><div class="pno-enemy-section"><div class="pno-enemy-section-label">Current hand</div><div class="pno-enemy-note">Street: ${live.street || 'preflop'}</div><div class="pno-enemy-note">Action: ${live.action || '—'}</div><div class="pno-enemy-note">Range: top ${live.rangeLabel || 'mixed'}</div><div class="pno-enemy-note">${live.opponents > 2 ? 'Multiway pot' : `Heads-up / ${live.opponents}-way`}</div>${liveBody}</div>`;
       enemy.style.display = 'block';
     }
 
