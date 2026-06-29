@@ -189,6 +189,21 @@
       overlay.setCoach(null);
     }
 
+    // Opponent profile from logged hands and the current live spot. Only read storage
+    // when the module is actually present — avoids a chrome.storage read every tick.
+    if (PNO.enemies) {
+      PNO.history.getAll((hands) => {
+        overlay.setEnemyProfile(PNO.enemies.profile(hands, {
+          street: PNO.history.streetName(state.board.length),
+          opponents: state.opponents,
+          rangeLabel,
+          action: decision.action,
+        }));
+      });
+    } else {
+      overlay.setEnemyProfile(null);
+    }
+
     // Expected value of calling — only meaningful when there's a bet to call.
     const ev = (res && state.call > 0)
       ? PNO.equity.callEV(res.equity, state.pot, state.call) : null;

@@ -189,6 +189,43 @@
 }
 .pno-coach:empty { display: none; }
 
+.pno-enemy {
+  margin-top: 8px;
+  padding: 6px 8px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: #b6d7ff;
+  background: rgba(77, 163, 255, 0.12);
+  border-left: 2px solid #4da3ff;
+  border-radius: 4px;
+}
+.pno-enemy-label {
+  display: inline-block;
+  margin-bottom: 4px;
+  color: #e8edf2;
+  font-weight: 600;
+}
+.pno-enemy-style {
+  margin-bottom: 4px;
+  color: #8ec5ff;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.pno-enemy-stats {
+  margin-bottom: 4px;
+  color: #dcefff;
+  font-weight: 600;
+}
+.pno-enemy-note { margin-top: 3px; color: #b9d4f5; }
+.pno-enemy-strategy {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #d7e8ff;
+}
+.pno-enemy-strategy-label { color: #8ec5ff; font-weight: 600; }
+.pno-enemy:empty { display: none; }
+
 .pno-note {
   margin-top: 8px;
   color: #6b7785;

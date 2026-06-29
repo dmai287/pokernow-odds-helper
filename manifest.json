@@ -44,6 +44,7 @@
         "src/poker/preflop.js",
         "src/poker/leaks.js",
         "src/poker/coach.js",
+        "src/poker/enemies.js",
         "src/content/scraper.js",
         "src/content/overlay.js",
         "src/content/history.js",

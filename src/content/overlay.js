@@ -125,6 +125,10 @@
     coach.style.display = 'none';
     results.appendChild(coach);
 
+    const enemy = el('div', 'pno-enemy', '');
+    enemy.style.display = 'none';
+    results.appendChild(enemy);
+
     body.appendChild(results);
 
     const note = el('div', 'pno-note', 'Study tool · cards auto-fill from the table when detected');
@@ -252,6 +256,21 @@
       coach.style.display = text ? 'block' : 'none';
     }
 
+    // Render an opponent profile based on observed tendencies and the current spot.
+    function setEnemyProfile(profile) {
+      if (!profile || !profile.ready) {
+        enemy.textContent = '';
+        enemy.style.display = 'none';
+        return;
+      }
+      const head = `<span class="pno-enemy-label">Enemy profile</span>`;
+      const stats = profile.stats ? `<div class="pno-enemy-stats">VPIP ${profile.stats.vpip}% · PFR ${profile.stats.pfr}% · 3bet ${profile.stats.threeBet}% · AF ${profile.stats.af}</div>` : '';
+      const body = profile.notes.slice(0, 3).map((note) => `<div class="pno-enemy-note">${note}</div>`).join('');
+      const summary = profile.strategy ? `<div class="pno-enemy-strategy"><span class="pno-enemy-strategy-label">Simple plan:</span> ${profile.strategy}</div>` : '';
+      enemy.innerHTML = `${head}<div class="pno-enemy-style">${profile.style.replace(/-/g, ' ')} · ${profile.tightnessPct}% tight · ${profile.aggressionPct}% aggressive</div>${stats}${body}${summary}`;
+      enemy.style.display = 'block';
+    }
+
     // Render draw info (flush/straight outs). Pass a falsy value to clear.
     function setDraws(info) {
       if (!info || !info.draws || !info.draws.length) {
@@ -293,6 +312,7 @@
       setBeats,
       setComposition,
       setCoach,
+      setEnemyProfile,
       setPosition,
       setEV,
       showResult,
