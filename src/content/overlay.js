@@ -24,11 +24,16 @@
     const root = el('div', 'pno-panel');
     root.id = 'pno-panel';
 
-    // Header (drag handle + collapse)
+    // Header (drag handle + compact toggle + collapse)
     const header = el('div', 'pno-header');
     header.appendChild(el('span', 'pno-title', '♠ Odds Helper'));
+    const headBtns = el('div', 'pno-head-btns');
+    const compactBtn = el('button', 'pno-collapse', '⊟');
+    compactBtn.title = 'Compact — hide the extra readouts';
     const collapseBtn = el('button', 'pno-collapse', '–');
-    header.appendChild(collapseBtn);
+    headBtns.appendChild(compactBtn);
+    headBtns.appendChild(collapseBtn);
+    header.appendChild(headBtns);
     root.appendChild(header);
 
     const body = el('div', 'pno-body');
@@ -110,6 +115,10 @@
     const ev = el('div', 'pno-ev', '');
     results.appendChild(ev);
 
+    const stack = el('div', 'pno-stack', '');
+    stack.style.display = 'none';
+    results.appendChild(stack);
+
     const draws = el('div', 'pno-draws', '');
     results.appendChild(draws);
 
@@ -127,6 +136,7 @@
 
     const enemy = el('div', 'pno-enemy', '');
     enemy.style.display = 'none';
+    const expandedEnemyCards = new Set();
     results.appendChild(enemy);
 
     body.appendChild(results);
@@ -140,6 +150,12 @@
     collapseBtn.addEventListener('click', () => {
       const collapsed = root.classList.toggle('pno-collapsed');
       collapseBtn.textContent = collapsed ? '+' : '–';
+    });
+
+    // Compact toggle — hide the secondary readouts, keep the decision + equity.
+    compactBtn.addEventListener('click', () => {
+      const compact = root.classList.toggle('pno-compact');
+      compactBtn.textContent = compact ? '⊞' : '⊟';
     });
 
     // Dragging
@@ -192,7 +208,7 @@
       const a = action || '';
       if (/^Fold/.test(a)) return { type: 'fold', icon: '✋' };
       if (/^(Check|Call)/.test(a)) return { type: 'call', icon: '✓' };
-      if (/^(Bet|Raise)/.test(a)) return { type: 'raise', icon: '⬆' };
+      if (/^(Bet|Raise|Shove)/.test(a)) return { type: 'raise', icon: '⬆' };
       return { type: 'idle', icon: '' };
     }
 
@@ -213,6 +229,18 @@
 
       decisionReason.textContent = d.reason;
       decisionBox.className = 'pno-decision pno-' + (d.tone || 'neutral') + ' pno-act-' + at.type;
+    }
+
+    // Render stack depth (chips, big blinds, SPR). Pass falsy to clear.
+    function setStack(info) {
+      if (!info) { stack.textContent = ''; stack.style.display = 'none'; return; }
+      const parts = [];
+      if (info.chips != null) parts.push(`Stack ${Math.round(info.chips).toLocaleString()}`);
+      if (info.bb != null) parts.push(`${Math.round(info.bb)}bb`);
+      if (info.spr != null) parts.push(`SPR ${info.spr.toFixed(1)}`);
+      stack.textContent = parts.join(' · ');
+      stack.className = 'pno-stack' + (info.short ? ' pno-stack-short' : (info.lowSpr ? ' pno-stack-low' : ''));
+      stack.style.display = parts.length ? 'block' : 'none';
     }
 
     // Render expected value of the call. Pass a falsy value to clear.
@@ -278,23 +306,65 @@
 
     // Render an opponent profile based on observed tendencies and the current spot.
     function setEnemyProfile(profile) {
-      if (!profile || !profile.ready) {
-        enemy.textContent = '';
-        enemy.style.display = 'none';
+      const profiles = Array.isArray(profile) ? profile.filter(Boolean) : (profile ? [profile] : []);
+      const readyProfiles = profiles.filter((item) => item && item.ready);
+      const hasHistory = profiles.some((item) => item && item.hasHistory);
+      if (!readyProfiles.length) {
+        if (hasHistory) {
+          enemy.innerHTML = `<span class="pno-enemy-label">Enemy profiles</span><div class="pno-enemy-note">Collect a few hands to build profiles for the table.</div>`;
+          enemy.style.display = 'block';
+        } else {
+          enemy.textContent = '';
+          enemy.style.display = 'none';
+        }
         return;
       }
-      const head = `<span class="pno-enemy-label">Enemy profile</span>`;
-      const history = profile.history || {};
-      const historyStats = history.stats || profile.stats ? `<div class="pno-enemy-stats">History · VPIP ${((history.stats || profile.stats || {}).vpip ?? '—')}% · PFR ${((history.stats || profile.stats || {}).pfr ?? '—')}% · 3bet ${((history.stats || profile.stats || {}).threeBet ?? '—')}% · CBET ${((history.stats || profile.stats || {}).cBet ?? '—')}% · AF ${((history.stats || profile.stats || {}).af ?? '—')}</div>` : '';
-      const categoryLabel = profile.category ? `<div class="pno-enemy-category">Danh mục: ${profile.category.label}</div>` : '';
-      const categoryNote = profile.category ? `<div class="pno-enemy-note">${profile.category.note}</div>` : '';
-      const historyBody = (history.notes || profile.notes || []).slice(0, 2).map((note) => `<div class="pno-enemy-note">${note}</div>`).join('');
-      const historySummary = Array.isArray(history.strategy || profile.strategy)
-        ? (history.strategy || profile.strategy).map((line) => `<div class="pno-enemy-strategy-line">${line}</div>`).join('')
-        : ((history.strategy || profile.strategy) ? `<div class="pno-enemy-strategy-line">${history.strategy || profile.strategy}</div>` : '');
-      const live = profile.live || {};
-      const liveBody = (live.notes || []).map((note) => `<div class="pno-enemy-note">${note}</div>`).join('');
-      enemy.innerHTML = `${head}<div class="pno-enemy-section"><div class="pno-enemy-section-label">Enemy profile</div>${historyStats}${categoryLabel}${categoryNote}<div class="pno-enemy-style">${(history.style || profile.style || 'mixed').replace(/-/g, ' ')} · ${(history.tightnessPct ?? profile.tightnessPct ?? 0)}% tight · ${(history.aggressionPct ?? profile.aggressionPct ?? 0)}% aggressive</div>${historyBody}<div class="pno-enemy-strategy"><span class="pno-enemy-strategy-label">Cách chơi:</span>${historySummary}</div></div><div class="pno-enemy-section"><div class="pno-enemy-section-label">Current hand</div><div class="pno-enemy-note">Street: ${live.street || 'preflop'}</div><div class="pno-enemy-note">Action: ${live.action || '—'}</div><div class="pno-enemy-note">Range: top ${live.rangeLabel || 'mixed'}</div><div class="pno-enemy-note">${live.opponents > 2 ? 'Multiway pot' : `Heads-up / ${live.opponents}-way`}</div>${liveBody}</div>`;
+      const head = `<span class="pno-enemy-label">Enemy profiles</span>`;
+      const cards = readyProfiles.map((item, index) => {
+        const history = item.history || {};
+        const historyStats = history.stats || item.stats ? `<div class="pno-enemy-stats">History · VPIP ${((history.stats || item.stats || {}).vpip ?? '—')}% · PFR ${((history.stats || item.stats || {}).pfr ?? '—')}% · 3bet ${((history.stats || item.stats || {}).threeBet ?? '—')}% · CBET ${((history.stats || item.stats || {}).cBet ?? '—')}% · AF ${((history.stats || item.stats || {}).af ?? '—')}</div>` : '';
+        const categoryLabel = item.category ? `<div class="pno-enemy-category">Danh mục: ${item.category.label}</div>` : '';
+        const categoryNote = item.category ? `<div class="pno-enemy-note">${item.category.note}</div>` : '';
+        const historyBody = (history.notes || item.notes || []).slice(0, 2).map((note) => `<div class="pno-enemy-note">${note}</div>`).join('');
+        const historySummary = Array.isArray(history.strategy || item.strategy)
+          ? (history.strategy || item.strategy).map((line) => `<div class="pno-enemy-strategy-line">${line}</div>`).join('')
+          : ((history.strategy || item.strategy) ? `<div class="pno-enemy-strategy-line">${history.strategy || item.strategy}</div>` : '');
+        const live = item.live || {};
+        const liveBody = (live.notes || []).map((note) => `<div class="pno-enemy-note">${note}</div>`).join('');
+        const playerName = item.player ? (item.player.name || (item.player.seat != null ? `Seat ${item.player.seat}` : 'Enemy')) : 'Enemy';
+        const playerSeat = item.player && item.player.seat != null ? `<span class="pno-enemy-seat">· Seat ${item.player.seat}</span>` : '';
+        const estimate = live.rangeLabel ? `<span class="pno-enemy-estimate">${live.rangeLabel}</span>` : '';
+        const playerLabel = `<div class="pno-enemy-player"><span class="pno-enemy-player-name">${playerName}</span>${estimate}${playerSeat}</div>`;
+        const compact = `<div class="pno-enemy-compact">${item.category ? item.category.label : 'Profile'} · ${(history.style || item.style || 'mixed').replace(/-/g, ' ')} · ${(history.tightnessPct ?? item.tightnessPct ?? 0)}% tight</div>`;
+        const body = `<div class="pno-enemy-body">${historyStats}${categoryLabel}${categoryNote}<div class="pno-enemy-style">${(history.style || item.style || 'mixed').replace(/-/g, ' ')} · ${(history.tightnessPct ?? item.tightnessPct ?? 0)}% tight · ${(history.aggressionPct ?? item.aggressionPct ?? 0)}% aggressive</div>${historyBody}<div class="pno-enemy-strategy"><span class="pno-enemy-strategy-label">Cách chơi:</span>${historySummary}</div></div>`;
+        const liveSection = `<div class="pno-enemy-section"><div class="pno-enemy-section-label">Current hand</div><div class="pno-enemy-note">Street: ${live.street || 'preflop'}</div><div class="pno-enemy-note">Action: ${live.action || '—'}</div><div class="pno-enemy-note">Range: top ${live.rangeLabel || 'mixed'}</div><div class="pno-enemy-note">${live.opponents > 2 ? 'Multiway pot' : `Heads-up / ${live.opponents}-way`}</div>${liveBody}</div>`;
+        const playerKey = item.player ? `${item.player.seat ?? ''}:${String(item.player.name || '').trim().toLowerCase()}` : `enemy-${index}`;
+        const expanded = expandedEnemyCards.has(playerKey) ? 'pno-enemy-expanded' : '';
+        return `<div class="pno-enemy-card ${expanded}" data-enemy-key="${playerKey}"><button class="pno-enemy-toggle" type="button">${playerLabel}${compact}</button><div class="pno-enemy-details">${body}${liveSection}</div></div>`;
+      }).join('');
+      enemy.innerHTML = `${head}${cards}`;
+      const toggleEnemyCard = (card) => {
+        if (!card) return;
+        const key = card.getAttribute('data-enemy-key');
+        const expanded = card.classList.toggle('pno-enemy-expanded');
+        if (key) {
+          if (expanded) expandedEnemyCards.add(key);
+          else expandedEnemyCards.delete(key);
+        }
+      };
+      enemy.querySelectorAll('.pno-enemy-card').forEach((card) => {
+        card.addEventListener('click', (event) => {
+          if (event.target.closest('.pno-enemy-toggle')) return;
+          toggleEnemyCard(card);
+        });
+      });
+      enemy.querySelectorAll('.pno-enemy-toggle').forEach((btn) => {
+        btn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          const card = btn.closest('.pno-enemy-card');
+          toggleEnemyCard(card);
+        });
+      });
       enemy.style.display = 'block';
     }
 
@@ -315,6 +385,7 @@
         barFill.style.width = '0%';
         detail.textContent = 'Enter your two hole cards to calculate';
         draws.textContent = '';
+        stack.textContent = ''; stack.style.display = 'none';
         beats.textContent = ''; beats.style.display = 'none';
         composition.textContent = ''; composition.style.display = 'none';
         coach.textContent = '';
@@ -335,6 +406,7 @@
       getInputs,
       setCards,
       setMeta,
+      setStack,
       setDraws,
       setBeats,
       setComposition,

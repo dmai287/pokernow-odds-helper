@@ -40,6 +40,18 @@
 .pno-body { padding: 10px; }
 .pno-collapsed .pno-body { display: none; }
 
+.pno-head-btns { display: flex; gap: 4px; }
+
+/* Compact mode: hide the input rows + secondary readouts, keep position/decision/equity. */
+.pno-compact .pno-row,
+.pno-compact .pno-ev,
+.pno-compact .pno-stack,
+.pno-compact .pno-draws,
+.pno-compact .pno-beats,
+.pno-compact .pno-comp,
+.pno-compact .pno-coach { display: none !important; }
+.pno-compact .pno-results { column-count: 1; margin-top: 0; border-top: none; }
+
 .pno-row {
   display: flex;
   align-items: center;
@@ -315,7 +327,7 @@
 .pno-enemy-player {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
   margin-bottom: 0;
   color: #8ec5ff;
@@ -323,6 +335,11 @@
 }
 .pno-enemy-player-name {
   color: #e8edf2;
+}
+.pno-enemy-estimate {
+  color: #ffd479;
+  font-size: 10px;
+  font-weight: 600;
 }
 .pno-enemy-seat {
   color: #9fb7d2;
