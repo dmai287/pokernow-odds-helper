@@ -42,12 +42,12 @@
 
 .pno-head-btns { display: flex; gap: 4px; }
 
-/* Compact mode: hide the input rows + secondary readouts, keep position/decision/equity. */
+/* Compact mode: hide the input rows + secondary readouts, but keep position /
+   decision / equity and the "what beats you" relative-strength line. */
 .pno-compact .pno-row,
 .pno-compact .pno-ev,
 .pno-compact .pno-stack,
 .pno-compact .pno-draws,
-.pno-compact .pno-beats,
 .pno-compact .pno-comp,
 .pno-compact .pno-coach { display: none !important; }
 .pno-compact .pno-results { column-count: 1; margin-top: 0; border-top: none; }
