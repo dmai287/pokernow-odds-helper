@@ -5,7 +5,7 @@
   top: 80px;
   right: 16px;
   z-index: 2147483647;
-  width: 230px;
+  width: 440px;
   background: rgba(18, 22, 28, 0.96);
   color: #e8edf2;
   font: 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -79,7 +79,19 @@
   margin-top: 4px;
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  /* Lay the readout lines out horizontally in two columns instead of one tall stack. */
+  column-count: 2;
+  column-gap: 16px;
 }
+.pno-results > * { break-inside: avoid; }
+/* Primary readouts stay full-width across the top; only the secondary metric lines
+   (EV, stack, draws, beats, composition, coach) flow into the two columns. */
+.pno-position,
+.pno-decision,
+.pno-equity,
+.pno-bar,
+.pno-detail,
+.pno-enemy { column-span: all; }
 
 .pno-position {
   font-size: 10.5px;
@@ -183,6 +195,15 @@
 
 .pno-detail { color: #8e9bab; font-size: 10.5px; }
 
+.pno-stack {
+  margin-top: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #9aa7b4;
+}
+.pno-stack-low { color: #ffd479; }
+.pno-stack-short { color: #ffb066; }
+
 .pno-ev {
   margin-top: 6px;
   font-size: 11px;
@@ -240,6 +261,8 @@
   background: rgba(77, 163, 255, 0.12);
   border-left: 2px solid #4da3ff;
   border-radius: 4px;
+  max-height: 220px;
+  overflow-y: auto;
 }
 .pno-enemy-label {
   display: inline-block;
@@ -252,6 +275,59 @@
   color: #8ec5ff;
   font-weight: 600;
   text-transform: capitalize;
+}
+.pno-enemy-card {
+  margin-top: 8px;
+  border: 1px solid rgba(142, 197, 255, 0.24);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+  cursor: pointer;
+}
+.pno-enemy-toggle {
+  width: 100%;
+  display: block;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: #8ec5ff;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  line-height: 1.25;
+}
+.pno-enemy-compact {
+  margin-top: 2px;
+  color: #9fb7d2;
+  font-size: 9.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pno-enemy-details {
+  display: none;
+  padding: 0 8px 8px;
+}
+.pno-enemy-expanded .pno-enemy-details {
+  display: block;
+}
+.pno-enemy-player {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 0;
+  color: #8ec5ff;
+  font-weight: 700;
+}
+.pno-enemy-player-name {
+  color: #e8edf2;
+}
+.pno-enemy-seat {
+  color: #9fb7d2;
+  font-size: 9.5px;
+  font-weight: 600;
 }
 .pno-enemy-section {
   margin-top: 6px;
