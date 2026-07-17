@@ -20,6 +20,31 @@
     return i;
   }
 
+  // chrome.* is absent outside the extension (e.g. the test harness) and throws once the
+  // context is invalidated after an extension reload. Guard every call so building the
+  // panel never depends on it.
+  function storageAlive() {
+    try {
+      return !!(chrome && chrome.runtime && chrome.runtime.id && chrome.storage);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function storageGet(defaults, cb) {
+    if (!storageAlive()) { cb(defaults); return; }
+    try {
+      chrome.storage.local.get(defaults, (v) => cb(v || defaults));
+    } catch (e) {
+      cb(defaults);
+    }
+  }
+
+  function storageSet(obj) {
+    if (!storageAlive()) return;
+    try { chrome.storage.local.set(obj); } catch (e) { /* context invalidated */ }
+  }
+
   function create() {
     const root = el('div', 'pno-panel');
     root.id = 'pno-panel';
@@ -184,12 +209,12 @@
       autoRangeToggle.querySelector('.pno-range-checkbox').checked = isAuto;
     }
 
-    chrome.storage.local.get({ autoRange: true, villainRange: 100 }, syncRangeControls);
+    storageGet({ autoRange: true, villainRange: 100 }, syncRangeControls);
     autoRangeToggle.querySelector('.pno-range-checkbox').addEventListener('change', (event) => {
       const checked = event.target.checked;
       rangeInput.disabled = checked;
       rangeValue.textContent = checked ? 'auto' : sliderLabel(rangeInput.value);
-      chrome.storage.local.set({ autoRange: checked });
+      storageSet({ autoRange: checked });
     });
     rangeInput.addEventListener('input', () => {
       rangeValue.textContent = autoRangeToggle.querySelector('.pno-range-checkbox').checked
@@ -197,7 +222,7 @@
         : sliderLabel(rangeInput.value);
     });
     rangeInput.addEventListener('change', () => {
-      chrome.storage.local.set({ villainRange: parseInt(rangeInput.value, 10) });
+      storageSet({ villainRange: parseInt(rangeInput.value, 10) });
     });
 
     // Collapse toggle
