@@ -240,9 +240,13 @@
     // equity 30% vs pot 100 / call 50 (breakeven 33.3%) — folds without a draw...
     ok(decide({ equity: 0.30, pot: 100, call: 50 }).action.startsWith('Fold'),
        '−EV with no draw → Fold');
-    // ...but a 9-out draw with a deep stack behind → Call (implied)
-    ok(decide({ equity: 0.30, pot: 100, call: 50, outs: 9, effStack: 1000 }).action === 'Call (implied)',
-       '−EV draw with deep stack → Call (implied)');
+    // ...a modest draw (below the semi-bluff-raise threshold) with a deep stack behind
+    // takes the implied-odds call
+    ok(decide({ equity: 0.30, pot: 100, call: 50, outs: 5, effStack: 1000 }).action === 'Call (implied)',
+       '−EV small draw with deep stack → Call (implied)');
+    // a big draw facing a bet prefers a semi-bluff raise over a passive call
+    ok(decide({ equity: 0.30, pot: 100, call: 50, outs: 9, effStack: 1000 }).action === 'Raise (semi-bluff)',
+       '−EV big draw facing a bet → Raise (semi-bluff)');
     // a draw but almost no stack behind → still Fold (no implied odds)
     ok(decide({ equity: 0.20, pot: 100, call: 50, outs: 9, effStack: 10 }).action.startsWith('Fold'),
        '−EV draw with no stack behind → Fold');
@@ -271,7 +275,7 @@
     for (let i = 0; i < 4; i++) coachHands.push({ position: 'Button', inPosition: true, street: 'flop', action: 'Bet → 50', ev: null, net: 40 });
     const cp = PNO.coach.profile(coachHands);
     ok(cp.ready && cp.overCallsRiver && cp.leaksOOP && cp.tooPassive, 'coach: profile flags all three leaks');
-    ok(/over-call rivers/.test(PNO.coach.note(cp, { street: 'river', action: 'Call', inPosition: false }) || ''),
+    ok(/river calls lose at showdown/.test(PNO.coach.note(cp, { street: 'river', action: 'Call', inPosition: false }) || ''),
        'coach: river over-call nudge');
     ok(/out of position/.test(PNO.coach.note(cp, { street: 'flop', action: 'Call', inPosition: false }) || ''),
        'coach: out-of-position nudge');
