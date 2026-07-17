@@ -83,6 +83,24 @@
     potRow.appendChild(potWrap);
     body.appendChild(potRow);
 
+    const rangeRow = el('div', 'pno-row');
+    rangeRow.appendChild(el('label', 'pno-label', 'Enemy range'));
+    const rangeCtrl = el('div', 'pno-range-wrap');
+    const rangeValue = el('div', 'pno-range-val', 'auto');
+    const rangeInput = el('input', 'pno-range-input');
+    rangeInput.type = 'range';
+    rangeInput.min = '5';
+    rangeInput.max = '100';
+    rangeInput.step = '5';
+    rangeInput.value = '100';
+    const autoRangeToggle = el('label', 'pno-range-toggle');
+    autoRangeToggle.innerHTML = `<input type="checkbox" class="pno-range-checkbox" checked><span>Auto</span>`;
+    rangeCtrl.appendChild(rangeInput);
+    rangeCtrl.appendChild(rangeValue);
+    rangeCtrl.appendChild(autoRangeToggle);
+    rangeRow.appendChild(rangeCtrl);
+    body.appendChild(rangeRow);
+
     // Results
     const results = el('div', 'pno-results');
 
@@ -130,6 +148,10 @@
     composition.style.display = 'none';
     results.appendChild(composition);
 
+    const texture = el('div', 'pno-texture', '');
+    texture.style.display = 'none';
+    results.appendChild(texture);
+
     const coach = el('div', 'pno-coach', '');
     coach.style.display = 'none';
     results.appendChild(coach);
@@ -139,12 +161,44 @@
     const expandedEnemyCards = new Set();
     results.appendChild(enemy);
 
+    const showdown = el('div', 'pno-showdown', '');
+    showdown.style.display = 'none';
+    results.appendChild(showdown);
+
     body.appendChild(results);
 
     const note = el('div', 'pno-note', 'Study tool · cards auto-fill from the table when detected');
     body.appendChild(note);
 
     document.body.appendChild(root);
+
+    function sliderLabel(value) {
+      return Number(value) >= 100 ? 'any two' : `top ${value}%`;
+    }
+
+    function syncRangeControls(settings) {
+      const isAuto = settings.autoRange;
+      rangeInput.value = settings.villainRange || 100;
+      rangeInput.disabled = isAuto;
+      rangeValue.textContent = isAuto ? 'auto' : sliderLabel(rangeInput.value);
+      autoRangeToggle.querySelector('.pno-range-checkbox').checked = isAuto;
+    }
+
+    chrome.storage.local.get({ autoRange: true, villainRange: 100 }, syncRangeControls);
+    autoRangeToggle.querySelector('.pno-range-checkbox').addEventListener('change', (event) => {
+      const checked = event.target.checked;
+      rangeInput.disabled = checked;
+      rangeValue.textContent = checked ? 'auto' : sliderLabel(rangeInput.value);
+      chrome.storage.local.set({ autoRange: checked });
+    });
+    rangeInput.addEventListener('input', () => {
+      rangeValue.textContent = autoRangeToggle.querySelector('.pno-range-checkbox').checked
+        ? 'auto'
+        : sliderLabel(rangeInput.value);
+    });
+    rangeInput.addEventListener('change', () => {
+      chrome.storage.local.set({ villainRange: parseInt(rangeInput.value, 10) });
+    });
 
     // Collapse toggle
     collapseBtn.addEventListener('click', () => {
@@ -298,6 +352,18 @@
       composition.style.display = 'block';
     }
 
+    // Render a board-texture strategy note. Pass falsy to clear.
+    function setTexture(info) {
+      const text = info && info.note;
+      texture.textContent = text ? '🃏 ' + text : '';
+      if (text && info.wetness) {
+        texture.className = 'pno-texture pno-tex-' + info.wetness.replace(/\s+/g, '-');
+      } else {
+        texture.className = 'pno-texture';
+      }
+      texture.style.display = text ? 'block' : 'none';
+    }
+
     // Render a coaching nudge (from your own history). Pass falsy to clear.
     function setCoach(text) {
       coach.textContent = text ? '🎯 ' + text : '';
@@ -308,63 +374,17 @@
     function setEnemyProfile(profile) {
       const profiles = Array.isArray(profile) ? profile.filter(Boolean) : (profile ? [profile] : []);
       const readyProfiles = profiles.filter((item) => item && item.ready);
-      const hasHistory = profiles.some((item) => item && item.hasHistory);
       if (!readyProfiles.length) {
-        if (hasHistory) {
-          enemy.innerHTML = `<span class="pno-enemy-label">Enemy profiles</span><div class="pno-enemy-note">Collect a few hands to build profiles for the table.</div>`;
-          enemy.style.display = 'block';
-        } else {
-          enemy.textContent = '';
-          enemy.style.display = 'none';
-        }
+        enemy.textContent = '';
+        enemy.style.display = 'none';
         return;
       }
-      const head = `<span class="pno-enemy-label">Enemy profiles</span>`;
-      const cards = readyProfiles.map((item, index) => {
-        const history = item.history || {};
-        const historyStats = history.stats || item.stats ? `<div class="pno-enemy-stats">History · VPIP ${((history.stats || item.stats || {}).vpip ?? '—')}% · PFR ${((history.stats || item.stats || {}).pfr ?? '—')}% · 3bet ${((history.stats || item.stats || {}).threeBet ?? '—')}% · CBET ${((history.stats || item.stats || {}).cBet ?? '—')}% · AF ${((history.stats || item.stats || {}).af ?? '—')}</div>` : '';
-        const categoryLabel = item.category ? `<div class="pno-enemy-category">Danh mục: ${item.category.label}</div>` : '';
-        const categoryNote = item.category ? `<div class="pno-enemy-note">${item.category.note}</div>` : '';
-        const historyBody = (history.notes || item.notes || []).slice(0, 2).map((note) => `<div class="pno-enemy-note">${note}</div>`).join('');
-        const historySummary = Array.isArray(history.strategy || item.strategy)
-          ? (history.strategy || item.strategy).map((line) => `<div class="pno-enemy-strategy-line">${line}</div>`).join('')
-          : ((history.strategy || item.strategy) ? `<div class="pno-enemy-strategy-line">${history.strategy || item.strategy}</div>` : '');
-        const live = item.live || {};
-        const liveBody = (live.notes || []).map((note) => `<div class="pno-enemy-note">${note}</div>`).join('');
-        const playerName = item.player ? (item.player.name || (item.player.seat != null ? `Seat ${item.player.seat}` : 'Enemy')) : 'Enemy';
-        const playerSeat = item.player && item.player.seat != null ? `<span class="pno-enemy-seat">· Seat ${item.player.seat}</span>` : '';
-        const estimate = live.rangeLabel ? `<span class="pno-enemy-estimate">${live.rangeLabel}</span>` : '';
-        const playerLabel = `<div class="pno-enemy-player"><span class="pno-enemy-player-name">${playerName}</span>${estimate}${playerSeat}</div>`;
-        const compact = `<div class="pno-enemy-compact">${item.category ? item.category.label : 'Profile'} · ${(history.style || item.style || 'mixed').replace(/-/g, ' ')} · ${(history.tightnessPct ?? item.tightnessPct ?? 0)}% tight</div>`;
-        const body = `<div class="pno-enemy-body">${historyStats}${categoryLabel}${categoryNote}<div class="pno-enemy-style">${(history.style || item.style || 'mixed').replace(/-/g, ' ')} · ${(history.tightnessPct ?? item.tightnessPct ?? 0)}% tight · ${(history.aggressionPct ?? item.aggressionPct ?? 0)}% aggressive</div>${historyBody}<div class="pno-enemy-strategy"><span class="pno-enemy-strategy-label">Cách chơi:</span>${historySummary}</div></div>`;
-        const liveSection = `<div class="pno-enemy-section"><div class="pno-enemy-section-label">Current hand</div><div class="pno-enemy-note">Street: ${live.street || 'preflop'}</div><div class="pno-enemy-note">Action: ${live.action || '—'}</div><div class="pno-enemy-note">Range: top ${live.rangeLabel || 'mixed'}</div><div class="pno-enemy-note">${live.opponents > 2 ? 'Multiway pot' : `Heads-up / ${live.opponents}-way`}</div>${liveBody}</div>`;
-        const playerKey = item.player ? `${item.player.seat ?? ''}:${String(item.player.name || '').trim().toLowerCase()}` : `enemy-${index}`;
-        const expanded = expandedEnemyCards.has(playerKey) ? 'pno-enemy-expanded' : '';
-        return `<div class="pno-enemy-card ${expanded}" data-enemy-key="${playerKey}"><button class="pno-enemy-toggle" type="button">${playerLabel}${compact}</button><div class="pno-enemy-details">${body}${liveSection}</div></div>`;
+      const lines = readyProfiles.map((item) => {
+        const playerName = item.player ? (item.player.name || (`Seat ${item.player.seat}`)) : 'Enemy';
+        const styleText = item.category ? item.category.label : (item.style || 'Mixed').replace(/-/g, ' ');
+        return `<div class="pno-enemy-summary"><strong>${esc(playerName)}</strong>: ${esc(styleText)}</div>`;
       }).join('');
-      enemy.innerHTML = `${head}${cards}`;
-      const toggleEnemyCard = (card) => {
-        if (!card) return;
-        const key = card.getAttribute('data-enemy-key');
-        const expanded = card.classList.toggle('pno-enemy-expanded');
-        if (key) {
-          if (expanded) expandedEnemyCards.add(key);
-          else expandedEnemyCards.delete(key);
-        }
-      };
-      enemy.querySelectorAll('.pno-enemy-card').forEach((card) => {
-        card.addEventListener('click', (event) => {
-          if (event.target.closest('.pno-enemy-toggle')) return;
-          toggleEnemyCard(card);
-        });
-      });
-      enemy.querySelectorAll('.pno-enemy-toggle').forEach((btn) => {
-        btn.addEventListener('click', (event) => {
-          event.stopPropagation();
-          const card = btn.closest('.pno-enemy-card');
-          toggleEnemyCard(card);
-        });
-      });
+      enemy.innerHTML = `<div class="pno-enemy-label">Enemy profiles</div>${lines}`;
       enemy.style.display = 'block';
     }
 
@@ -378,6 +398,17 @@
       draws.textContent = `${labels} · ${info.outs} outs · ${info.note}`;
     }
 
+    function setShowdown(lines) {
+      if (!Array.isArray(lines) || !lines.length) {
+        showdown.textContent = '';
+        showdown.style.display = 'none';
+        return;
+      }
+      const html = lines.map((line) => `<div class="pno-showdown-line">${line}</div>`).join('');
+      showdown.innerHTML = `<div class="pno-showdown-label">Showdown strategy</div>${html}`;
+      showdown.style.display = 'block';
+    }
+
     function showResult(res, decision, rangeLabel) {
       setDecision(decision);
       if (!res) {
@@ -388,8 +419,10 @@
         stack.textContent = ''; stack.style.display = 'none';
         beats.textContent = ''; beats.style.display = 'none';
         composition.textContent = ''; composition.style.display = 'none';
+        texture.textContent = ''; texture.style.display = 'none';
         coach.textContent = '';
         coach.style.display = 'none';
+        setShowdown(null);
         return;
       }
       const pct = (res.equity * 100);
@@ -399,6 +432,9 @@
         `Win ${(res.win * 100).toFixed(1)}% · Tie ${(res.tie * 100).toFixed(1)}% · ` +
         `Lose ${(res.lose * 100).toFixed(1)}% · ${res.iterations.toLocaleString()} sims` +
         (rangeLabel ? ` · vs ${rangeLabel}` : '');
+      if (!showdown.textContent) {
+        showdown.style.display = 'none';
+      }
     }
 
     return {
@@ -408,10 +444,12 @@
       setMeta,
       setStack,
       setDraws,
+      setTexture,
       setBeats,
       setComposition,
       setCoach,
       setEnemyProfile,
+      setShowdown,
       setPosition,
       setEV,
       showResult,

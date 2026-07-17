@@ -12,6 +12,7 @@
   let overlay = null;
   let observer = null;
   let coachProfile = null;
+  let lastOppKey = null; // hero-hand key for the last good opponent-count read (anti-stale)
 
   // Recompute the player's tendency profile from logged hands.
   function refreshCoach() {
@@ -40,16 +41,135 @@
   // latter is the reliable signal: tables often replace cards with no settled gap.
   let pendingHand = null;
   let pendingHeroKey = null;
+  let pendingPlayers = null;
+  let pendingSessionId = null;
+  let pendingDecisionSnapshot = null;
   let handStartStack = null;
+
+  function makePlayerKey(player) {
+    const seat = player && player.seat != null ? player.seat : 'unknown';
+    const name = player && player.name ? String(player.name).trim().toLowerCase() : '';
+    const stack = player && player.stack != null ? String(player.stack) : '';
+    return `${seat}:${name || stack || 'unknown'}`;
+  }
+
+  function normalizeDecisionKey(decision) {
+    if (!decision || typeof decision !== 'object') return '';
+    const action = String(decision.action || '').trim().toLowerCase();
+    const tone = String(decision.tone || '').trim().toLowerCase();
+    const size = decision.size && typeof decision.size.chips === 'number' ? decision.size.chips : '';
+    const reason = String(decision.reason || '').trim();
+    return `${action}|${tone}|${size}|${reason}`;
+  }
+
+  function appendHandHistoryEntry(hand, entry) {
+    if (!hand) return;
+    hand.actionHistory = hand.actionHistory || [];
+    const last = hand.actionHistory[hand.actionHistory.length - 1];
+    if (last
+      && last.street === entry.street
+      && last.action === entry.action
+      && last.rangeLabel === entry.rangeLabel
+      && last.pot === entry.pot
+      && last.call === entry.call) {
+      return;
+    }
+    hand.actionHistory.push(entry);
+  }
+
+  function makeActionHistoryEntry(street, action, rangeLabel, opponents, pot, call, board) {
+    return {
+      t: Date.now(),
+      street,
+      action,
+      rangeLabel,
+      opponents,
+      pot,
+      call,
+      board: Array.isArray(board) ? board.map(PNO.cards.cardToStr) : [],
+    };
+  }
+
+  function aggregateOpponentStats(profiles) {
+    if (!Array.isArray(profiles) || !profiles.length) return null;
+    let totalWeight = 0;
+    let vpip = 0;
+    let pfr = 0;
+    let af = 0;
+    let tightness = 0;
+    let aggression = 0;
+    let cBet = 0;
+    let foldToAggression = 0;
+    let turnAggression = 0;
+    let riverAggression = 0;
+    let riverCheck = 0;
+    let riverCall = 0;
+    profiles.forEach((profile) => {
+      if (!profile || !profile.stats || typeof profile.stats.sampleSize !== 'number') return;
+      const weight = Math.max(1, profile.stats.sampleSize);
+      totalWeight += weight;
+      const stats = profile.stats;
+      vpip += (typeof stats.vpip === 'number' ? stats.vpip : 0) * weight;
+      pfr += (typeof stats.pfr === 'number' ? stats.pfr : 0) * weight;
+      af += (typeof stats.af === 'number' ? stats.af : 0) * weight;
+      tightness += (typeof stats.tightness === 'number' ? stats.tightness : 50) * weight;
+      aggression += (typeof stats.aggression === 'number' ? stats.aggression : 50) * weight;
+      cBet += (typeof stats.cBet === 'number' ? stats.cBet : 0) * weight;
+      foldToAggression += (typeof stats.foldToAggression === 'number' ? stats.foldToAggression : 0) * weight;
+      turnAggression += (typeof stats.turnAggression === 'number' ? stats.turnAggression : 0) * weight;
+      riverAggression += (typeof stats.riverAggression === 'number' ? stats.riverAggression : 0) * weight;
+      riverCheck += (typeof stats.riverCheck === 'number' ? stats.riverCheck : 0) * weight;
+      riverCall += (typeof stats.riverCall === 'number' ? stats.riverCall : 0) * weight;
+    });
+    if (totalWeight <= 0) return null;
+    return {
+      vpip: Math.round((vpip / totalWeight) * 10) / 10,
+      pfr: Math.round((pfr / totalWeight) * 10) / 10,
+      af: Math.round((af / totalWeight) * 10) / 10,
+      tightness: Math.round(tightness / totalWeight),
+      aggression: Math.round(aggression / totalWeight),
+      cBet: Math.round(cBet / totalWeight),
+      foldToAggression: Math.round(foldToAggression / totalWeight),
+      turnAggression: Math.round(turnAggression / totalWeight),
+      riverAggression: Math.round(riverAggression / totalWeight),
+      riverCheck: Math.round(riverCheck / totalWeight),
+      riverCall: Math.round(riverCall / totalWeight),
+      sampleSize: totalWeight,
+    };
+  }
+
+  function clearPendingDecision() {
+    pendingSessionId = null;
+    pendingDecisionSnapshot = null;
+  }
 
   function commitHand(endStack) {
     if (!pendingHand) return;
     if (typeof endStack === 'number') pendingHand.endStack = endStack;
     pendingHand.net = (typeof handStartStack === 'number' && typeof pendingHand.endStack === 'number')
       ? pendingHand.endStack - handStartStack : null;
-    PNO.history.add(pendingHand);
+    const handRecord = Object.assign({}, pendingHand);
+    PNO.history.add(handRecord);
+
+    if ((pendingPlayers || []).length) {
+      const enemyRecords = pendingPlayers.map((player) => Object.assign({}, pendingHand, {
+        playerKey: makePlayerKey(player),
+        seat: player.seat,
+        playerName: player.name || (player.seat != null ? `Seat ${player.seat}` : 'Enemy'),
+        playerCards: Array.isArray(player.cards) ? player.cards.map(PNO.cards.cardToStr) : [],
+        stack: player.stack,
+        stackBucket: player.stack != null ? Math.round(player.stack / 100) * 100 : null,
+      }));
+      enemyRecords.forEach((record) => { if (typeof PNO.history.addEnemy === 'function') PNO.history.addEnemy(record); });
+    }
+
+    if (pendingSessionId && PNO.cash && typeof PNO.cash.resolveDecision === 'function') {
+      PNO.cash.resolveDecision(pendingSessionId, { result: 'hand-ended' });
+    }
     pendingHand = null;
     pendingHeroKey = null;
+    pendingPlayers = null;
+    clearPendingDecision();
     handStartStack = null;
     refreshCoach(); // learn from the hand just logged
   }
@@ -69,13 +189,16 @@
     let position = null;
     let heroStack = null;
     let myTurn = null;
+    let stackBucket = null;
+    let scraped = null;
 
     let bb = null;
     if (settings.autoDetect) {
-      const scraped = PNO.scraper.scrape();
+      scraped = PNO.scraper.scrape();
       heroStack = scraped.heroStack;
       bb = scraped.bb;
       myTurn = scraped.myTurn;
+      stackBucket = scraped.opponentStackBucket;
       // Mirror the live table exactly, including empties. When a hand ends and the
       // board / hole cards clear, this resets the displayed cards and odds instead of
       // leaving the previous hand's numbers on screen.
@@ -83,7 +206,13 @@
       state.board = scraped.board;
       overlay.setCards(state.hero, state.board);
 
-      state.opponents = scraped.opponents > 0 ? scraped.opponents : state.opponents;
+      // Opponent count drives equity-vs-N. A transient 0 (deal/clear animation) must not
+      // carry a count from a *different* hand: keep the prior count only within the same
+      // hero hand; on a new hand with no clean read yet, fall back to a neutral 1.
+      const oppKey = state.hero.length === 2 ? state.hero.map(PNO.cards.cardToStr).join('') : null;
+      if (scraped.opponents > 0) state.opponents = scraped.opponents;
+      else if (oppKey && oppKey !== lastOppKey) state.opponents = 1;
+      if (oppKey) lastOppKey = oppKey;
       if (scraped.pot != null) state.pot = scraped.pot;
       if (scraped.call != null) state.call = scraped.call;
       overlay.setMeta(
@@ -101,7 +230,7 @@
 
       overlay.setDraws(null);
       overlay.setEV(null);
-      overlay.showResult(null, PNO.decision.decide({ equity: null }));
+      overlay.showResult(null, PNO.cash.decide({ equity: null, pot: 0, call: 0, opponents: 1, street: 'preflop' }));
       return;
     }
 
@@ -110,23 +239,33 @@
 
     // Build the villain range(s). With auto-range and a multiway bet, model the raiser
     // with a tight range and the callers with a wider one (per-villain ranges).
+    const deadCards = state.hero.concat(state.board);
     const autoTight = PNO.ranges.tightnessFromAction(state.pot, state.call, state.board.length);
+    const describeRange = (pct, combos) => {
+      if (pct == null) return 'Any two cards';
+      const percentText = `Top ${Math.round(pct * 100)}%`;
+      return combos != null ? `${percentText} of remaining combos (${combos} left)` : percentText;
+    };
+
     let villainRange, rangeLabel;
     if (settings.autoRange) {
       const tightSet = autoTight >= 1 ? null : PNO.ranges.topPercent(autoTight);
+      const left = tightSet ? PNO.ranges.aliveRange(tightSet, deadCards) : null;
+      const tightText = describeRange(autoTight, left && left.combos);
       if (state.call > 0 && state.opponents > 1) {
         const callerSet = PNO.ranges.topPercent(0.50);
         villainRange = [tightSet];
         for (let i = 1; i < state.opponents; i++) villainRange.push(callerSet);
-        rangeLabel = `raiser top ${Math.round(autoTight * 100)}% · ${state.opponents - 1}× top 50%`;
+        rangeLabel = `${tightText} (auto) · callers top 50%`;
       } else {
         villainRange = tightSet;
-        rangeLabel = tightSet ? `top ${Math.round(autoTight * 100)}% (auto)` : 'any two';
+        rangeLabel = tightSet ? `${tightText} (auto)` : 'Any two cards';
       }
     } else {
       const p = Math.max(5, Math.min(100, settings.villainRange || 100)) / 100;
       villainRange = p >= 1 ? null : PNO.ranges.topPercent(p);
-      rangeLabel = villainRange ? `top ${Math.round(p * 100)}%` : 'any two';
+      const left = villainRange ? PNO.ranges.aliveRange(villainRange, deadCards) : null;
+      rangeLabel = villainRange ? describeRange(p, left && left.combos) : 'Any two cards';
     }
 
     // "What beats you" — weight by the bettor's range when we have one (use the tight
@@ -145,29 +284,69 @@
 
     // Preflop, prefer position-based starting-hand advice; postflop use equity/pot odds
     // (with implied odds for draws and a stack-behind estimate).
-    const preflopAdvice = (state.board.length === 0)
-      ? PNO.preflop.advise({
-          hole: state.hero,
-          position: position ? position.name : null,
-          inPosition: position ? position.inPosition : undefined,
-          call: state.call,
-          bb,
-        })
+    const preflopInput = {
+      hole: state.hero,
+      position: position ? position.name : null,
+      positionGroup: position ? position.group : null,
+      inPosition: position ? position.inPosition : undefined,
+      call: state.call,
+      bb,
+      effStack: typeof heroStack === 'number' ? heroStack : 0,
+      opponentStats: null,
+    };
+    const preflopAdvice = (state.board.length === 0 && PNO.preflop && typeof PNO.preflop.advise === 'function')
+      ? PNO.preflop.advise(preflopInput)
       : null;
 
-    const decision = preflopAdvice
+    const opponentBets = (scraped.players || [])
+      .filter((player) => player && !player.hero && player.active)
+      .map((player) => (typeof player.bet === 'number' ? player.bet : 0));
+    const maxOpponentBet = opponentBets.length ? Math.max.apply(null, opponentBets) : 0;
+    const enemyDecisionAction = state.call > 0
+      ? ((typeof bb === 'number' && state.call >= Math.max(2, bb * 1.5)) ? 'raise' : 'bet')
+      : (maxOpponentBet > 0 ? 'bet' : 'check');
+
+    const decisionInput = {
+      equity: res ? res.equity : null,
+      pot: state.pot,
+      call: state.call,
+      opponents: state.opponents,
+      inPosition: position ? position.inPosition : undefined,
+      outs: drawInfo ? drawInfo.outs : 0,
+      effStack: typeof heroStack === 'number' ? Math.max(0, heroStack - state.call) : 0,
+      position: position ? position.name : null,
+      street: PNO.history.streetName(state.board.length),
+      action: enemyDecisionAction,
+      board: state.board.map(PNO.cards.cardToStr),
+      hero: state.hero.map(PNO.cards.cardToStr),
+      opponentStats: null,
+      blockers: null,
+    };
+
+    let decision = preflopAdvice
       ? preflopAdvice
       : res
-        ? PNO.decision.decide({
-            equity: res.equity,
-            pot: state.pot,
-            call: state.call,
-            opponents: state.opponents,
-            inPosition: position ? position.inPosition : undefined,
-            outs: drawInfo ? drawInfo.outs : 0,
-            effStack: typeof heroStack === 'number' ? Math.max(0, heroStack - state.call) : 0,
-          })
+        ? PNO.cash.decide(decisionInput)
         : { action: '—', tone: 'bad', reason: 'Duplicate card detected — check your inputs.' };
+
+    function publishDecision(currentDecision) {
+      const decisionKey = normalizeDecisionKey(currentDecision);
+      if (settings.autoDetect && decisionKey) {
+        const sameDecision = pendingDecisionSnapshot === decisionKey;
+        if (!sameDecision) {
+          pendingDecisionSnapshot = decisionKey;
+          if (!pendingSessionId) {
+            pendingSessionId = `hand-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+          }
+          if (PNO.cash && typeof PNO.cash.logDecision === 'function') {
+            PNO.cash.logDecision(decisionInput, currentDecision, pendingSessionId);
+          }
+        }
+      }
+      return currentDecision;
+    }
+
+    decision = publishDecision(decision);
 
     // Advise only on your turn (when enabled and we can tell it isn't): keep the
     // equity/draws/EV as information but hold the Fold/Call/Raise call.
@@ -184,24 +363,105 @@
         inPosition: position ? position.inPosition : undefined,
         action: decision.action,
         facingBet: state.call > 0,
+        // Only nudge "you over-call rivers" when THIS spot is actually marginal (equity
+        // near the price) — not on comfortable value calls.
+        marginal: (res && state.call > 0)
+          ? Math.abs(res.equity - state.call / (state.pot + state.call)) < 0.12
+          : undefined,
       }));
     } else {
       overlay.setCoach(null);
     }
 
+    // Board-texture note — gated on the equity/SPR we already computed, single-street.
+    if (PNO.texture) {
+      const tex = PNO.texture.analyze(state.hero, state.board);
+      const texSpr = (typeof heroStack === 'number' && state.pot > 0) ? heroStack / state.pot : null;
+      overlay.setTexture(tex ? {
+        note: PNO.texture.note(tex, {
+          equity: res ? res.equity : null,
+          toCall: state.call,
+          spr: texSpr,
+        }),
+        wetness: tex.wetness,
+      } : null);
+    }
+
+    // Stack-depth readout (chips · big blinds · SPR) — factored into the advice above.
+    if (typeof heroStack === 'number' && heroStack > 0) {
+      const stackBB = bb > 0 ? heroStack / bb : null;
+      const spr = (state.board.length > 0 && state.pot > 0) ? heroStack / state.pot : null;
+      overlay.setStack({
+        chips: heroStack,
+        bb: stackBB,
+        spr,
+        short: stackBB != null && stackBB <= 20,
+        lowSpr: spr != null && spr <= 2.5,
+      });
+    } else {
+      overlay.setStack(null);
+    }
+
     // Opponent profile from logged hands and the current live spot. Only read storage
     // when the module is actually present — avoids a chrome.storage read every tick.
     if (PNO.enemies) {
-      PNO.history.getAll((hands) => {
-        overlay.setEnemyProfile(PNO.enemies.profile(hands, {
-          street: PNO.history.streetName(state.board.length),
-          opponents: state.opponents,
-          rangeLabel,
-          action: decision.action,
-        }));
+      PNO.history.getEnemyAll((hands) => {
+        const activeOpponents = (scraped.players || []).filter((player) => player && !player.hero && player.active);
+        const profiles = activeOpponents.length
+          ? activeOpponents.map((player) => {
+              const profile = PNO.enemies.profile(hands, {
+                street: PNO.history.streetName(state.board.length),
+                opponents: state.opponents,
+                rangeLabel,
+                action: enemyDecisionAction,
+                stackBucket,
+                playerKey: makePlayerKey(player),
+                seat: player.seat,
+                name: player.name,
+                stack: player.stack,
+              });
+              return Object.assign(profile, {
+                player: { seat: player.seat, name: player.name || `Seat ${player.seat}`, stack: player.stack },
+                hasHistory: Array.isArray(hands) && hands.length >= 3,
+              });
+            })
+          : [Object.assign(PNO.enemies.profile(hands, {
+              street: PNO.history.streetName(state.board.length),
+              opponents: state.opponents,
+              rangeLabel,
+              action: enemyDecisionAction,
+              stackBucket,
+            }), { hasHistory: Array.isArray(hands) && hands.length >= 3 })];
+        overlay.setEnemyProfile(profiles);
+
+        const opponentStats = aggregateOpponentStats(profiles);
+        if (state.board.length === 0 && opponentStats && PNO.preflop && typeof PNO.preflop.advise === 'function') {
+          const updatedPreflop = PNO.preflop.advise(Object.assign({}, preflopInput, { opponentStats }));
+          if (updatedPreflop && normalizeDecisionKey(updatedPreflop) !== normalizeDecisionKey(decision)) {
+            decision = publishDecision(updatedPreflop);
+            const shownDecisionWithStats = (settings.autoDetect && settings.onlyMyTurn && myTurn === false)
+              ? { action: '⏳ Not your turn', tone: 'neutral', reason: 'Advice appears when it’s your action.' }
+              : decision;
+            overlay.showResult(res, shownDecisionWithStats, rangeLabel);
+          }
+        }
+
+        if (opponentStats) {
+          const updatedDecision = PNO.cash.decide(Object.assign({}, decisionInput, { opponentStats }));
+          if (normalizeDecisionKey(updatedDecision) !== normalizeDecisionKey(decision)) {
+            decision = publishDecision(updatedDecision);
+            const shownDecisionWithStats = (settings.autoDetect && settings.onlyMyTurn && myTurn === false)
+              ? { action: '⏳ Not your turn', tone: 'neutral', reason: 'Advice appears when it’s your action.' }
+              : decision;
+            overlay.showResult(res, shownDecisionWithStats, rangeLabel);
+          }
+        }
+
+        overlay.setShowdown(null);
       });
     } else {
       overlay.setEnemyProfile(null);
+      overlay.setShowdown(null);
     }
 
     // Expected value of calling — only meaningful when there's a bet to call.
@@ -215,7 +475,9 @@
       const heroKey = state.hero.map(PNO.cards.cardToStr).join('');
       // New hand dealt (different hole cards): commit the previous one. The current
       // stack already reflects that hand's result, so it serves as the end stack.
-      if (pendingHand && pendingHeroKey !== heroKey) commitHand(heroStack);
+      if (pendingHand && pendingHeroKey !== heroKey) {
+        commitHand(heroStack);
+      }
       const sameHand = pendingHand && pendingHeroKey === heroKey;
 
       // The pot only grows within a hand. Once the hand resolves, the table resets the
@@ -225,7 +487,10 @@
       if (!resetting) {
         if (pendingHand === null) handStartStack = heroStack; // first tick of a new hand
         pendingHeroKey = heroKey;
-        pendingHand = {
+        pendingPlayers = (scraped.players || []).filter((player) => player && !player.hero && player.active);
+        const history = pendingHand && Array.isArray(pendingHand.actionHistory)
+          ? pendingHand.actionHistory.slice() : [];
+        pendingHand = Object.assign({}, pendingHand || {}, {
           t: Date.now(),
           hero: state.hero.map(PNO.cards.cardToStr),
           board: state.board.map(PNO.cards.cardToStr),
@@ -240,7 +505,22 @@
           ev,
           range: rangeLabel,
           endStack: heroStack,
-        };
+          stackBucket,
+          sessionId: pendingSessionId,
+          actionHistory: history,
+        });
+        appendHandHistoryEntry(
+          pendingHand,
+          makeActionHistoryEntry(
+            pendingHand.street,
+            enemyDecisionAction,
+            rangeLabel,
+            state.opponents,
+            state.pot,
+            state.call,
+            state.board
+          )
+        );
       }
     }
   }

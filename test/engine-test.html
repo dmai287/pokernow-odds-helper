@@ -19,6 +19,7 @@
   <script src="../src/poker/decision.js"></script>
   <script src="../src/poker/draws.js"></script>
   <script src="../src/poker/beats.js"></script>
+  <script src="../src/poker/texture.js"></script>
   <script src="../src/poker/ranges.js"></script>
   <script src="../src/poker/composition.js"></script>
   <script src="../src/poker/preflop.js"></script>
@@ -323,6 +324,48 @@
     const aaDom = comp(topPercent(0.10), C('As Ah')).strongerPct;
     ok(weakDom > 0.8, '72o is a weaker starting hand than most of a tight range');
     ok(aaDom < 0.05, 'AA: almost nothing in the range is stronger');
+
+    // --- board texture ---
+    const tex = PNO.texture.analyze;
+    const texNote = PNO.texture.note;
+    ok(tex(C('As Ks'), []) === null, 'texture: null pre-flop');
+
+    // facts
+    const twoTone = tex(C('Qc Qd'), C('9h 6h 2s'));       // QQ overpair, 2 hearts, unpaired
+    ok(twoTone.twoTone && twoTone.flushDrawLive && !twoTone.paired,
+       'texture: two-tone flop → flush draw live');
+    ok(twoTone.heroOverpair && twoTone.strongMade, 'texture: QQ on 9-6-2 is an overpair');
+    const mono = tex(C('Qc Qd'), C('9h 6h 2h'));
+    ok(mono.monotone && mono.flushPossible && !mono.heroHasFlush,
+       'texture: monotone flop → flush already possible');
+    const dry = tex(C('Qc Qd'), C('9h 6s 2d'));
+    ok(dry.rainbow && dry.wetness === 'dry', 'texture: rainbow disconnected → dry');
+    // 99 on 8-8-5 must NOT count as an overpair (paired board breaks naive logic)
+    const pairedBoard = tex(C('9c 9d'), C('8h 8s 5d'));
+    ok(pairedBoard.paired && !pairedBoard.heroOverpair && !pairedBoard.strongMade,
+       'texture: paired board → 99 on 8-8-5 is not an "overpair"');
+    // straight window
+    ok(tex(C('Ac Kd'), C('9h 8s 7d')).connected, 'texture: 9-8-7 is connected');
+    ok(tex(C('Ac Kd'), C('9h 8s 7d 6c')).straightNearlyThere,
+       'texture: 4 to a straight → one card completes it');
+
+    // notes — the user's case: strong made hand while a draw is live → charge it
+    const chargeNote = texNote(twoTone, { equity: 0.75, toCall: 0, spr: 8 });
+    ok(/bet/i.test(chargeNote) && /charge/i.test(chargeNote),
+       'texture note: overpair + live flush draw → bet to charge it');
+    ok(/raise rather than call/i.test(texNote(twoTone, { equity: 0.75, toCall: 50, spr: 8 })),
+       'texture note: facing a bet → raise, not bet (legal action)');
+    // a completed flush outranks the "charge it" note
+    ok(/flush is already possible/i.test(texNote(mono, { equity: 0.75, toCall: 0, spr: 8 })),
+       'texture note: monotone board → warns the flush is already possible');
+    // low equity must not trigger the "charge it" advice
+    ok(texNote(twoTone, { equity: 0.30, toCall: 0, spr: 8 }) === null ||
+       !/charge/i.test(texNote(twoTone, { equity: 0.30, toCall: 0, spr: 8 }) || ''),
+       'texture note: gated on equity — no "charge it" when behind');
+    // one card to come must not quote the two-card number
+    const turnNote = texNote(tex(C('Qc Qd'), C('9h 6h 2s 3d')), { equity: 0.75, toCall: 0, spr: 8 });
+    ok(/19%/.test(turnNote) && !/35%/.test(turnNote),
+       'texture note: turn quotes the one-card number (~19%), not ~35%');
 
     // --- history street naming ---
     const sn = PNO.history.streetName;

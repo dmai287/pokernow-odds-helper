@@ -59,6 +59,41 @@
   margin-bottom: 8px;
 }
 
+.pno-range-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: flex-end;
+}
+.pno-range-input {
+  flex: 1 1 auto;
+  margin-right: 8px;
+}
+.pno-range-input[type="range"] {
+  width: 160px;
+}
+.pno-range-val {
+  min-width: 46px;
+  color: #d7e8ff;
+  font-size: 11px;
+  text-align: right;
+}
+.pno-range-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #9aa7b4;
+  cursor: pointer;
+  user-select: none;
+}
+.pno-range-checkbox {
+  width: 14px;
+  height: 14px;
+  accent-color: #6fe79f;
+}
+
 .pno-label { color: #9aa7b4; font-size: 11px; }
 
 .pno-cards { display: flex; gap: 4px; }
@@ -97,13 +132,14 @@
 }
 .pno-results > * { break-inside: avoid; }
 /* Primary readouts stay full-width across the top; only the secondary metric lines
-   (EV, stack, draws, beats, composition, coach) flow into the two columns. */
+   (EV, stack, draws, beats, composition, coach, showdown) flow into the two columns. */
 .pno-position,
 .pno-decision,
 .pno-equity,
 .pno-bar,
 .pno-detail,
-.pno-enemy { column-span: all; }
+.pno-enemy,
+.pno-showdown { column-span: all; }
 
 .pno-position {
   font-size: 10.5px;
@@ -251,6 +287,20 @@
 .pno-comp-label { color: #9aa7b4; font-weight: 600; }
 .pno-comp-dom { color: #8e9bab; font-size: 10px; margin-top: 2px; }
 .pno-comp-threat { color: #ff8b8b; font-weight: 600; }
+
+.pno-texture {
+  margin-top: 8px;
+  padding: 6px 8px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: #ffe0a8;
+  background: rgba(255, 180, 60, 0.12);
+  border-left: 2px solid #ffb066;
+  border-radius: 4px;
+}
+.pno-texture.pno-tex-very-wet { border-left-color: #ff8b8b; background: rgba(255, 100, 100, 0.12); }
+.pno-texture.pno-tex-dry { border-left-color: #6fe79f; background: rgba(111, 231, 159, 0.10); color: #cdeedd; }
+.pno-texture:empty { display: none; }
 
 .pno-coach {
   margin-top: 8px;
