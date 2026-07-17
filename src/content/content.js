@@ -11,6 +11,7 @@
   let settings = Object.assign({}, DEFAULTS);
   let overlay = null;
   let observer = null;
+  let heartbeatTimer = null;
   let coachProfile = null;
   let lastOppKey = null; // hero-hand key for the last good opponent-count read (anti-stale)
 
@@ -31,6 +32,7 @@
   }
 
   function shutdown() {
+    if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
     if (observer) { try { observer.disconnect(); } catch (e) {} observer = null; }
     if (overlay) { try { overlay.setEnabled(false); } catch (e) {} }
   }
@@ -143,6 +145,21 @@
     pendingDecisionSnapshot = null;
   }
 
+  function shouldCommitPendingHand(state, currentHeroKey) {
+    if (!pendingHand) return false;
+    const heroCards = Array.isArray(state && state.hero) ? state.hero : [];
+    const boardCards = Array.isArray(state && state.board) ? state.board : [];
+    const heroCardsCleared = heroCards.length < 2;
+    const boardCleared = boardCards.length === 0 && Array.isArray(pendingHand.board) && pendingHand.board.length > 0;
+    const changedHand = !!currentHeroKey && !!pendingHeroKey && currentHeroKey !== pendingHeroKey;
+    return heroCardsCleared || boardCleared || changedHand;
+  }
+
+  if (!PNO.handLifecycle) {
+    PNO.handLifecycle = {};
+  }
+  PNO.handLifecycle.shouldCommitPendingHand = shouldCommitPendingHand;
+
   function commitHand(endStack) {
     if (!pendingHand) return;
     if (typeof endStack === 'number') pendingHand.endStack = endStack;
@@ -191,6 +208,7 @@
     let myTurn = null;
     let stackBucket = null;
     let scraped = null;
+    let heroKey = '';
 
     let bb = null;
     if (settings.autoDetect) {
@@ -222,10 +240,11 @@
       );
       position = scraped.position;
     }
+    heroKey = state.hero.map(PNO.cards.cardToStr).join('');
     overlay.setPosition(position);
 
-    if (state.hero.length !== 2) {
-      // Hand over (cards cleared): commit the last snapshot.
+    if (state.hero.length !== 2 || shouldCommitPendingHand(state, heroKey)) {
+      // Hand over or the table moved on to a new hand: commit the last snapshot.
       if (settings.autoDetect) commitHand(heroStack);
 
       overlay.setDraws(null);
@@ -298,7 +317,10 @@
       ? PNO.preflop.advise(preflopInput)
       : null;
 
-    const opponentBets = (scraped.players || [])
+    // `scraped` is null when auto-detect is off — never dereference it bare, or every
+    // recompute throws and the hand snapshot below is never built (history stops).
+    const scrapedPlayers = (scraped && scraped.players) || [];
+    const opponentBets = scrapedPlayers
       .filter((player) => player && !player.hero && player.active)
       .map((player) => (typeof player.bet === 'number' ? player.bet : 0));
     const maxOpponentBet = opponentBets.length ? Math.max.apply(null, opponentBets) : 0;
@@ -373,20 +395,6 @@
       overlay.setCoach(null);
     }
 
-    // Board-texture note — gated on the equity/SPR we already computed, single-street.
-    if (PNO.texture) {
-      const tex = PNO.texture.analyze(state.hero, state.board);
-      const texSpr = (typeof heroStack === 'number' && state.pot > 0) ? heroStack / state.pot : null;
-      overlay.setTexture(tex ? {
-        note: PNO.texture.note(tex, {
-          equity: res ? res.equity : null,
-          toCall: state.call,
-          spr: texSpr,
-        }),
-        wetness: tex.wetness,
-      } : null);
-    }
-
     // Stack-depth readout (chips · big blinds · SPR) — factored into the advice above.
     if (typeof heroStack === 'number' && heroStack > 0) {
       const stackBB = bb > 0 ? heroStack / bb : null;
@@ -406,7 +414,7 @@
     // when the module is actually present — avoids a chrome.storage read every tick.
     if (PNO.enemies) {
       PNO.history.getEnemyAll((hands) => {
-        const activeOpponents = (scraped.players || []).filter((player) => player && !player.hero && player.active);
+        const activeOpponents = scrapedPlayers.filter((player) => player && !player.hero && player.active);
         const profiles = activeOpponents.length
           ? activeOpponents.map((player) => {
               const profile = PNO.enemies.profile(hands, {
@@ -472,7 +480,7 @@
 
     // Update the hand-in-progress snapshot (committed to history when the hand ends).
     if (settings.autoDetect) {
-      const heroKey = state.hero.map(PNO.cards.cardToStr).join('');
+      heroKey = state.hero.map(PNO.cards.cardToStr).join('');
       // New hand dealt (different hole cards): commit the previous one. The current
       // stack already reflects that hand's result, so it serves as the end stack.
       if (pendingHand && pendingHeroKey !== heroKey) {
@@ -487,7 +495,7 @@
       if (!resetting) {
         if (pendingHand === null) handStartStack = heroStack; // first tick of a new hand
         pendingHeroKey = heroKey;
-        pendingPlayers = (scraped.players || []).filter((player) => player && !player.hero && player.active);
+        pendingPlayers = scrapedPlayers.filter((player) => player && !player.hero && player.active);
         const history = pendingHand && Array.isArray(pendingHand.actionHistory)
           ? pendingHand.actionHistory.slice() : [];
         pendingHand = Object.assign({}, pendingHand || {}, {
@@ -532,13 +540,27 @@
     const debounced = debounce(recompute, 350);
     overlay.onChange(debounced);
 
-    observer = new MutationObserver(debounced);
+    // The panel lives inside document.body, so recompute's own writes to it would
+    // re-trigger this observer and schedule another recompute — a self-sustaining loop
+    // that re-runs forever and, now that recompute is heavy (Monte Carlo + beats +
+    // profiles), saturates the renderer. Only react to mutations outside the panel.
+    observer = new MutationObserver((records) => {
+      const root = overlay && overlay.root;
+      if (root && records.every((r) => r.target && root.contains(r.target))) return;
+      debounced();
+    });
     observer.observe(document.body, {
       subtree: true,
       childList: true,
       attributes: true,
       attributeFilter: ['class', 'data-card'],
     });
+
+    heartbeatTimer = setInterval(() => {
+      if (settings.autoDetect && pendingHand) {
+        recompute();
+      }
+    }, 1500);
 
     // React to live settings changes from the popup, and to history updates.
     chrome.storage.onChanged.addListener((changes, area) => {
