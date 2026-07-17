@@ -3,7 +3,7 @@
   "name": "PokerNow Odds Helper",
   "version": "0.1.0",
   "description": "Pot odds and Monte Carlo equity helper for PokerNow. A study/review tool for poker math.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "unlimitedStorage"],
   "host_permissions": [
     "https://www.pokernow.club/*",
     "https://pokernow.club/*",
@@ -50,6 +50,7 @@
         "src/content/scraper.js",
         "src/content/overlay.js",
         "src/content/history.js",
+        "src/content/hand-lifecycle.js",
         "src/content/content.js"
       ],
       "css": ["src/content/overlay.css"],
